@@ -1,0 +1,149 @@
+[Criterios]
+- Não obrigatorio a implementar os sistemas ja existente
+- Deve ser uma bliblioteca completa, eu quero que seja detectado a linguagem de programação principal e o formato criado para modificar e ajustar para o sistema ja existente aonde eu quero que usa a linguagem de programação usada no código existente
+- Faça que organize para na pasta raiz so tenha vessieai-core, server.js, public, .env, start.bat
+- Faça um sistema completo de auto-atualização aonde cada pasta tenha sua propria organização
+- Correções de palavras a palavras ChatBOT, Modelo de ia, Agente Loop, Ela são referente o Agente Loop que se chama VessieAI
+- Deve ser feito com base dos scritps existente
+- Deve ser feito usando (NodeJS + Express) o nome do AI-APP é Vessie AI
+
+# Agent Loop
+- Eu quero que seja feito um Agent loop, eu quero que o Agent Loop deve ir nessa ordem para funcionar "observar --> pensar --> agir --> Resultado" eu quero que depois desse deve analizar o resultado se der certo deve avaçançar para frente mais se der errado ele refaça todo o ciclo
+- Implemente um um sistema de contexto aonde eu quero que organiza usando agentes mds aonde gere um sistema completo de md aonde cada resposta do agente loop, deve ser selecionado por seleção de conteudos para organizar de forma mais compelto exemplo: como vocé fala com o cliente, quem é o seu publico, qual é o seu projeto, o que voce quer resolver, qual é o seu objetivo, ela deve fazer um sistema completo fazer um sistema completo
+- Implemente um sistema de regras de 200 linhas aonde o agente loop para ele aprender cada tipo aonde tem um limite para não intupir o agente loop de respostas inutil e complexas exemplo: "tipo de perfil, tipo de resposta, tipo de cliente, o que fazer com o documento, documento"
+- Implemente um Sistema de engenheiro de contexto, aonde eu uqero que voce faça um sistema para criar contextos md aonde pode enviar um sistema completo
+- Implemente um sistema para corrigir esqueçimento de conversas, implementando um Memory.md para criar um sistema de memoria completo aonde ele vai observer pensar e ajustar o memory para funcionar
+- Implemete um sistema para ele saber e ler que existe o que tem no memory.md e o agent.md e eu quero que o sistema de memory seja feito um sistema aonde ele deve lembrar e cunsultar e melhorar apesar dos tempo e implementar um sistema para ele entender mais eu tipo esse exemplo : como voce fala com o cliente, como voce vende, o que voce faz depois de uma venda
+- Implemente um sistema avançado de correção de ortografias e erros de falas do usuario para criar e da propria ia
+- Implementar um sistema avançado de IA completa usando pesquisa web e coleta de dados para se aprimorar de forma automana
+- Tudo deve ser configuravel no .env aonde eu quero que possa ser modificavo o modelo de ia no .env aonde eu quero que voce faça que consiga modificar o modelo padrão aonde eu quero que cria algo completo e faça vários sistemas completo
+
+# Model AI
+- Implementar sistema avançado de modelos de AI de código aberto ou fechado aonde posso implementar modelos de ia aberto e fechados Exemplo: Claude, OpenAI, Z Chat, LM Studio, LLama e etcs
+- Implemente um sistema que No public fica o interface web criada aonde eu quero que ele manda para o servidor que eu troquei de modelo de ia para corrigir os erros e para aprimorar os modelos de ia e mandar as informações para ele saber
+
+# ChatBOT
+- Implementeu m sistema para gerar respostas com mais clarezas e concisão para ter um foco na explicação direta sem redundancias, exemplos práticos: adota a abordagem de "exemplo do dia a dia" para conectar teorias á realidade, temas conversacional para manter o tom amigavel e acessivel, evitando linguagem tecnicas, flexibilidade Permite adaptação para diferentes temas ou tamanho de resposta (parets menores ou  longas), respostas a duvidas incluie uma regra para abordar ambiguidades, garantindo precisão
+- Implemente um sistea avançado de naturalizar a ia para ser mais humana, eu quero que a ia pense que é humana e aja como voce humana
+- Faça um sistema completo de definições de projeto aonde eu posso selecionar uma pasta e ele possa criar ler editar e deletar arquivos nela aonde tenha que selecionar uma pasta especifica para ela aonde eu quero que voce faça um sistema completo para isso aonde eu quero um aprimoramento completo
+
+# Thinking - Pensamento Logico
+- Implemente um sistema avançado de Aprimoramento de prompt aonde ele deve antes de responder ele deve aprimorar o prompt do usuario para sistemas complexos demais
+- Implemente um sistema avançado de criador de exemplos aonde ele para sistemas complexos tipo código deve criar exemplos que são salvos com nome proprio selecionado pelo modelo de ia
+- Implemente um sistema avançado de variantes aonde ele seleciona algums exemplos e sistemas e coisas que pode ser usado
+- Implemente um sistema avançado de questionario Aonde posa fazer perguntas para definir um foco principal e definitivo para aprimorar
+- Implemente um sistema avançado de reconhecimento de palavras não reconhecidas corretamente para corrigilas para endender
+- Implemente um sistema avançado de facilitação de thinking aonde alguns modelos de ia usa Esta configuração funcionará apenas para modelos de 'raciocínio' como DeepSeek R1 e suas variantes, que produzem CoT nas tags <think> e </think>.
+- Implemente um sistema avançado de qualquer modelo de tenha o sistema de tags no chatbot aonde eu quero que cria um sistema para criar este sistema de forma manual ou automatica aondeo manual faz que os modelos de ia que não tem think possa ter aonde ele gera um prompt completo que é o maual, automatico são modelos que tem think aonde eu quero que ele seja feito um sistema completo para aprimorar o prompt do usuario e faz um geramento de resposta mais completa
+
+# Automação
+- Implemente um sistema completo de execução completo de executação de sistena completo para agir aonde um sistema completo de auto melhora, aonde o ciclo selecionado deve criar uma skill condo o projeto ocorrer tudo perfeitamente
+- Implementar um sistema completo de extração de informações complexa aonde deve ser análizado conteudos complexos demais para ia e salvar essas partes com nomes proprio selecionados pela Agente Loop
+- Implementar um sistema compelto de compress tokens aonde salva conteudos leve e salva com o nome selecionado pela Agente Loop para aprimorar o proprio sistema aonde salva e usa para proxima vez
+- Implemente um sistema avançado de coleta de pois este sistema so vai ser meu aonde eu quero que todoso os scirpts e tudo que ela gerar deve ser salvo com nome gerado pelo modelo de ia aonde eu quero que gere um sistema ultra avançado aonde ela vai regerendo por cima do que ja existe aprimorando para informações coletado do usuarios como perguntas, Códigos e um sistema de humanizar a ia completamente aonde ela aja que é humana completamente
+
+# Multi-Agent
+- Faça um sistema completo de Multiplos agentes para criar um sistema compelto para compartilhar informações entre os modelos de ias
+- Faça um sistema completo para funcionar mais de um modelo de ia aonde eu quero que ufncione mais de 1 modelo de ia do lm studio
+
+# Interface Web
+- Faça usando Web LocalHost:3000
+- adicionar uma __aba "Agentes"__ na UI mostrando os rascunhos de cada modelo, ou implementar o __questionário de foco__ / __detecção automática de linguagem já aplicada na geração de código__
+- Implemente um sisetma compelto para destacar Scripts, Arquivos
+
+# Personalidade
+- Faça que seja feito um system prompt no .env, euq uero que seja feito base compelta para se auto modificar com base do system prompt aonde eu quero que seja feito um sistema completo para rodar em volta do system prompt o comportamentos e forma de agir
+- Eu quero que o system prompt seja feito um sistema de emoções aonde eu quero que faça voce esta triste <System Prompt> e mais esses para mais de 22 emoções, eu quero que ela tenha emoções, Comportamento, Vida propria, eu quero que ela gere um arquivo chamado Life.md aonde no primeira palavra ela deve gerar uma historia que vai ser usado para ela agir como foçe humana
+- Eu quero que ela saiba o que é ruim ou bom, eu quero que ele consigua ser mais livre em questão de xingamentos, Palavras, Palavras sensuais
+- Eu quero que tenha uma opção chamada Adapative System prompt aonde é uma opção de ON/OFF aonde eu quero que condo estiver ativada eu quero que ela se adapta de forma graduantes as infomrações durante as conversas do usuarios e o Chatbot aonde eu quero que ela vai criando com base da conversa
+- Eu quero que implemente um sisetma completa de emoções boas e ruim, eu quero que ela possa endender que tem limites tipo "Mostra a sua bunda" Ela não vai gostar do comportamento e vai ficar constrangida ate o final da aquela conversa aonde ela pode mudar ou ela pode ate gostar dependendo de que for
+
+# Share-Thinking
+- Faça que todas as respostas e tudo que foi gerado por um modelo de ia e trocar no meio, o proximo modelo de ia deve ser feito um sistema completo para reutilizar as cosias do modelo de ia selecionado anteriormente para ser reutilizado para manter a mesma mentalidade
+- Implemente um sistema avançado aonde consegue compartilhar arquivos entre si os modelos e as vezes trabalhar juntos para consiguir a respostas de forma mais praticas e funcionais
+- Implemente um sistema aonde sera criado um arquivo chamado Share-Thinking.md aonde eu quero que ele faça que tudas as respostas e tudo seja criado um prompt de comportamento para todas as ias aonde codno trocar de modelo ela deve ler o prompt e trocar o comportamento para aquele que estava anteriormente mais com as modifciações do modelo de ia mais de forma mais completa e aprimorada
+
+# Memory Manager
+- Implemente um sistema avançado aonde deve ser gerado um sistema igual skill usando Memory.md
+- Faça que o memory.md seja feito pelo modelo de ia aonde ele deve análizar o chat e ficar redefinindo o Memory da forma que o usaurios aonde lee seleciona tudo que é importante os comportamentos que o usuario contem e as respostas anteriores para ela se lembrar sempre
+- Faça que a Modelo de ia selecione as coisas que deve ser armazenadas na memoria de conportamento do usuarios tipo nome, coisa que gosta, comportamento, forma de falar para ser armazenada aodne eu quero que ela tenha que perguntar se não ouver essas informações aonde eu quero que ela vai perguntando de forma adapativa entre 5 a 10, perguntas e respostas do usuario e da ia aonde eu quero que seja análizado tudo sobre o usuario em tempo real para criar o formato que ele e ate chutar quais tipo de coisa ele gosta se não ouver tipo de informações
+
+# Skills
+- Implemente um sistema de skill aonde deve ser organizado em arquivo com o nome e sistema proprio com instruções e o que ja foi feito para reutilizar o projeto para não nessseisdar aonde ele gera um skill usando Markdown.md aibde são instruções separadas que deve ser criadas para aprimorar aonde deve ser feito para não fazer aonde envia uma insturção e depois de pedir uma proxima ele simplismente criar algo do zero perdendo todo o contexto do projeto corrigindo este problema separando por skill os sistemas nessesarios
+- Implemente um sistema de skill aonde as skills possam conter scripts que são análizado pelo modelo de ia usado no sistema
+
+# Google Drive
+- Implementar um sistema avançado de criação de pastas para organizar procurando padrões da pastas existente para armazenar em skill para organizar as pastas para consiguir organizar
+- Implementar um sistema avaçado de sicronização do google drive para organizar
+- Implementar acessos direto ao meu drive para forma de foco aonde deve ser ativado e deve especifcar com um sistema compelto
+- Implemenet um sistema completo aonde eu quero que usa o sistema de montagem de drive em formato de armazenamento do computador aonde eu quero que eu possa selecionar um disco que é o drive e ele possa ser modificavel
+
+# Coding
+- Implementar um sistema avançado apropriado para criação de códiogs ultra avançado
+- implementar um sistema avançado de pensamento logico deve ser procurado na web todas as blibliotecas que deve ser utilizado ou pode ser utilizado para usar para desenvolver
+- Implementar um sistema avançado de Usar pensamento logico, Web-Seatch para coletar dados para criar algo mais completo aonde ajusta vários pacotes da internet e outros e usar sistema de codebase
+- Implementar um sistema avançado de CodeBase personalizado aonde deve ser criado uam skill com uma documetnaçaõ completa dentro dos padrões descrevendo truques e sistemas usado e criado e salvado todos os scripts separando por pastas e skills para organizar e usar para uma proxima aonde ela deve coletar esses scripts e so copiar e colar e modificar
+- Implemente um sistema avançado de edição por linha aonde não seja nessesario recriar o mesmo script para so para facilitar e melhorar
+- Implementar um sistema de definir o tipo de script e destacar o script e o nome e copiar o script
+- Implemente um sistema que Gere um sistema de códigos mais avançado aonde eu quero que implemente um sistema de module aonde eu quero que dentro tenha codigos gerado por voce e pela ia aonde eu uqero que tudo que tiver dentro a ia edita por linhas usando ele de referencia aonde gere com um nome completo para o script aonde deve ser .py .html e etcs, eu quero que implemente um sistema ultra compelto com vários sistemas de referencias e aprimoramentos para a ia
+- Implemente um sistema avançado de resete de conversa para script aonde eu quero que antes de gerar codigos ela deve reformar todo o prompt e aprimorar o sistema requisitado pelo usuario aonde ele procura os melhores sistemas e praticas para colocar aonde eu quero que condo ele pega e trasforma em um system prompt para enviar para criar o codigo e depois de criar gera um prompt de forma separada do que foi criado e continhua o sistema
+- Impelemte um sistema avnaçado de Trasforme Códigos aoned eu quero que faça que troca as partes do codigo por prompt aonde lee vai ler a parte do script e vai trasformar esta parte em um texto explicando oq ue vai acontecer e o que acontece aonde eu não quero que seja diretamente aonde ele copia para dentro do proprio sistema de forma não salvo aonde ele vai trasformar as linhas do código em prompt e depois vai modificar da forma mais pratica procurando o que deve ser aprimorado na opnião dela aonde eu uqero que rcia um sistema completo para isso
+
+# SERVER MCP
+- Implementar um sistema para conectar servidores mcps de outros site usando servidores mcp
+- Implemente um sistema completo de tradutor de linguagem aonde ele deve traduzir a linguagem do sites de uma forma mais compriendivel para ia aonde deve usar os servidores e deve ser possivel conectar enviando o comando do MCP
+- Implementar um sistema completo de web-search usando navegadores python cli aonde eu quero que esse sistema possa coletar elementos ler conteudos website completamente de forma mais automatica e mais completo aonde ela vai deletando elementos coletado para códigos e resultados para respostas
+- Implemente um sistema avançado de Implementeção de servidores mcp usando json igual do Cline Ai, Copilot
+- Implemente um sistema avanmçado de verificação aonde o modelo de ia deve análizar o nome, função da ferramenta para usar elas em momentos que ela acha apropriado
+- Implemente um sistema avançado de usar o servidor mcp chamado Vessie-MCP do cline ai aonde repassa para ela e de forma separada dentro da ia ela consiga implementar ferramentas, Resources, Prompts do servidor mcp aonde ela consiga implementar diretamente na ia mais nunca dentro do proprio servidor
+- Implemente um sistema avnaçado de compriendimentso aonde eu quero que ela usa os tools, Resources, Prompts do servidores MCPS para se aprimorar e consiguir ser usado de forma mais praticas e aprimorada para um comportamento mais completo para gerar coisas mais compelxas aonde ela deve procurar antes de criar uma respostas tools e resources, prompts que possa ser usado para responder
+
+# Sistemas avançados que deve ser implementado
+- Implemente Gere de uma forma que ela consiga se modificar aonde eu quer oque cria um sistema completo, eu
+- Organize os scripts em pastas para criar um core completo e organizado para a ia usar
+- Implemente um sistema avançado de eu quero que voce junta todas as funções completamente entre sistemas tipo Texto com texto, Códigos com códigos
+- Implemente um sistema avançado de códigos aonde no source seja criado um sistema arpopriado para o basecode da skill
+- Implemente um sistema avançado de Sources mais aprimoramentos e faça vários sistemas aprimorados aonde eu uqero que aprimore implementado mais de 30 váriações diferentes
+- Implemente um sistema avançado de Aprimoramento automatico, faça um sistema completo no source, eu quero que aprimore para fazer que a ia fica mais natural em falas mais completo
+- Implemente um sistema avançado de pesquisa na web
+- Implementar sistema de personalidade aonde deve ser organizado na configuração, estado emocional deve ser colocado na configuração, eu quero que o sistemas deve ser colocado nas configurações e o modo da ia
+- Implemente eu quero que implemente mais sistemas para calculos e sistemas basicos para diminuir a nessesidade de token, eu quero que tenha mais sistemas para diminuir a nessesidade dos tokenes e diminuir os consumos deles, eu quero que implemente engine propria e mais sistemas de coleta de dados cada resposta da ia deve ser armazenada para proxima vez naõ nessesitar da ia novamento por api key aonde eu quero que seja detectado mesma pergunta aonde se ouver mesma pergutna ele so faça aonde ele gere 10 variantes da resposta e so envia uma as outras são armazenadas para não ouver e todas devem ser váriaveis da selecionada aonde so modifica algumas linha e seleciona qual tem mais recursos aonde eu quero que ia possa modifciar sistemas e muito mais por linha sem a nessesidade de recriar o mesmo código de forma disnessesaria
+- Eu quero que voce junta o Exemple, Test, Docs eu quero que voce implemente mais sistemas de facilitagem de Resumo e diminuir o uso de tokens para aprimorar aonde e uquero que implemente mais sistemas e mais completamete masi e implemente um sistema de patchs completo
+
+Diretórios:
+Arquitetura base:
+└── package.json
+└── start.bat
+└── package-lock.json
+└── server.js
+└── vessieai-core/
+	├── config/
+	├── core/
+	├── agents/
+	├── context/
+	├── memory/
+	├── skills/
+	├── thinking/
+	├── models/
+	├── providers/
+	├── automation/
+	├── coding/
+	├── codebase/
+	├── patches/
+	├── sources/
+	├── search/
+	├── mcp/
+	├── tools/
+	├── storage/
+	├── cache/
+	├── compression/
+	├── examples/
+	├── tests/
+	├── docs/
+	├── personality/
+	├── emotions/
+	├── projects/
+	├── sharing/
+	├── managers/
+	├── utils/
+	└── index.js
