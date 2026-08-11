@@ -1,2 +1,15 @@
 node_modules
 dist
+
+# Modelos GGUF locais (arquivos muito grandes)
+*.gguf
+models/*
+!models/.gitkeep
+!models/README.md
+
+# Variáveis de ambiente (contêm segredos) — mas versionamos os exemplos
+.env
+!**/.env.example
+
+# Dados gerados em runtime
+vessels-data/

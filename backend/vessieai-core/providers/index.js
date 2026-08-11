@@ -1,12 +1,14 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import fetch from 'node-fetch';
+import { GgufProvider } from './ggufProvider.js';
 
 export class ProviderManager {
   constructor() {
-    this.activeProvider = process.env.AI_PROVIDER || 'lmstudio';
-    this.activeModel = process.env.AI_MODEL || 'local-model';
+    this.activeProvider = process.env.AI_PROVIDER || 'gguf';
+    this.activeModel = process.env.AI_MODEL || 'LocalModel.gguf';
     this.clients = {};
+    this.gguf = new GgufProvider();
     this._initClients();
   }
 
@@ -33,6 +35,17 @@ export class ProviderManager {
     }
   }
 
+  /**
+   * Resolve o provedor a ser usado.
+   * Se o chamador não pedir um provedor específico, prefere o GGUF local
+   * quando estiver disponível e cai para LM Studio caso contrário.
+   */
+  resolveProvider(requested) {
+    if (requested && requested !== 'auto') return requested;
+    if (this.gguf.ready) return 'gguf';
+    return 'lmstudio';
+  }
+
   setActive(provider, model) {
     this.activeProvider = provider;
     this.activeModel = model;
@@ -43,6 +56,7 @@ export class ProviderManager {
 
   getConfigured() {
     return {
+      gguf: { name: this.gguf.label, ready: this.gguf.ready, status: this.gguf.status, message: this.gguf.message, active: this.resolveProvider(this.activeProvider) === 'gguf' },
       lmstudio: { name: 'LM Studio', url: process.env.LM_STUDIO_URL, active: this.activeProvider === 'lmstudio' },
       openai: { name: 'OpenAI', configured: !!process.env.OPENAI_API_KEY, active: this.activeProvider === 'openai' },
       anthropic: { name: 'Anthropic (Claude)', configured: !!process.env.ANTHROPIC_API_KEY, active: this.activeProvider === 'anthropic' },
@@ -51,6 +65,15 @@ export class ProviderManager {
 
   async listModels() {
     const all = [];
+
+    // GGUF local
+    if (this.gguf.ready) {
+      all.push({
+        id: this.gguf.info?.name || 'LocalModel.gguf',
+        provider: 'gguf',
+        name: `${this.gguf.info?.name} (${this.gguf.info?.size})`,
+      });
+    }
 
     // LM Studio
     try {
@@ -81,10 +104,15 @@ export class ProviderManager {
   }
 
   async streamChat(provider, model, messages, options = {}, onChunk) {
-    const p = provider || this.activeProvider;
+    const p = this.resolveProvider(provider || this.activeProvider);
     const m = model || this.activeModel;
     const temp = options.temperature ?? parseFloat(process.env.AI_TEMPERATURE || '0.7');
     const maxTokens = options.maxTokens ?? parseInt(process.env.AI_MAX_TOKENS || '2048');
+
+    if (p === 'gguf') {
+      await this.gguf.streamChat(messages, { ...options, temperature: temp, maxTokens }, onChunk);
+      return;
+    }
 
     if (p === 'anthropic' && this.clients.anthropic) {
       const sysMsg = messages.find(m => m.role === 'system');
@@ -121,10 +149,14 @@ export class ProviderManager {
   }
 
   async chat(provider, model, messages, options = {}) {
-    const p = provider || this.activeProvider;
+    const p = this.resolveProvider(provider || this.activeProvider);
     const m = model || this.activeModel;
     const temp = options.temperature ?? parseFloat(process.env.AI_TEMPERATURE || '0.7');
     const maxTokens = options.maxTokens ?? parseInt(process.env.AI_MAX_TOKENS || '2048');
+
+    if (p === 'gguf') {
+      return this.gguf.chat(messages, { ...options, temperature: temp, maxTokens });
+    }
 
     if (p === 'anthropic' && this.clients.anthropic) {
       const sysMsg = messages.find(msg => msg.role === 'system');

@@ -340,15 +340,80 @@ app.post('/api/questionnaire', async (req, res) => {
   res.json({ focus });
 });
 
+// ─── GGUF (modelo local) ───────────────────────────────────────────────────────
+app.get('/api/gguf/status', (req, res) => res.json(core.providers.gguf.statusJSON()));
+
+app.post('/api/gguf/reload', async (req, res) => {
+  try {
+    await core.providers.gguf.reload();
+    res.json(core.providers.gguf.statusJSON());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── API compatível com OpenAI (permite usar o backend como provedor) ─────────
+app.get('/v1/models', async (req, res) => {
+  const models = await core.providers.listModels();
+  res.json({
+    object: 'list',
+    data: models.map(m => ({ id: m.id, object: 'model', owned_by: m.provider || 'vessie' })),
+  });
+});
+
+app.post('/v1/chat/completions', async (req, res) => {
+  const { messages, model, stream = false, temperature, max_tokens } = req.body || {};
+
+  if (stream) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const mk = () => ({ id: `vessie-${Date.now()}`, object: 'chat.completion.chunk', created: Math.floor(Date.now() / 1000), model });
+    const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
+    try {
+      await core.providers.streamChat('auto', model, messages, { temperature, maxTokens: max_tokens }, (chunk) => {
+        send({ ...mk(), choices: [{ index: 0, delta: { content: chunk } }] });
+      });
+      send({ ...mk(), choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] });
+      res.write('data: [DONE]\n\n');
+    } catch (err) {
+      send({ ...mk(), error: { message: err.message } });
+    }
+    res.end();
+    return;
+  }
+
+  try {
+    const content = await core.providers.chat('auto', model, messages, { temperature, maxTokens: max_tokens });
+    res.json({
+      id: `vessie-${Date.now()}`, object: 'chat.completion', created: Math.floor(Date.now() / 1000), model,
+      choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }],
+    });
+  } catch (err) {
+    res.status(500).json({ error: { message: err.message } });
+  }
+});
+
 // ─── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
   await core.init();
-  console.log('\n╔══════════════════════════════════════╗');
-  console.log('║          VESSIE AI SERVER            ║');
-  console.log('╠══════════════════════════════════════╣');
-  console.log(`║  URL: http://localhost:${PORT}          ║`);
-  console.log(`║  Provider: ${(process.env.AI_PROVIDER || 'lmstudio').padEnd(25)}║`);
-  console.log(`║  Model: ${(process.env.AI_MODEL || 'local-model').padEnd(28)}║`);
-  console.log('╚══════════════════════════════════════╝\n');
+  await core.providers.gguf.init().catch((err) => console.error('[GGUF] init error:', err.message));
+
+  const ggufReady = core.providers.gguf.ready;
+  console.log('\n╔══════════════════════════════════════════╗');
+  console.log('║            VESSIE AI SERVER              ║');
+  console.log('╠══════════════════════════════════════════╣');
+  console.log(`║  URL: http://localhost:${PORT}              ║`);
+  console.log(`║  Provider: ${(ggufReady ? 'gguf (local)' : (process.env.AI_PROVIDER || 'lmstudio')).padEnd(28)}║`);
+  console.log(`║  Model: ${((core.providers.gguf.info?.name) || process.env.AI_MODEL || 'local-model').slice(0, 32).padEnd(31)}║`);
+  console.log(`║  GGUF: ${(ggufReady ? '✓ ' + core.providers.gguf.info.size : '✕ (sem LocalModel.gguf)').padEnd(34)}║`);
+  console.log('╚══════════════════════════════════════════╝\n');
+  if (!ggufReady) {
+    console.log('[AVISO] Para rodar um modelo GGUF, coloque LocalModel.gguf em models/ e reinicie.');
+    console.log('[AVISO] Sem GGUF, o sistema usará LM Studio / OpenAI / Anthropic conforme o .env.');
+  }
 });

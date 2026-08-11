@@ -10,7 +10,10 @@
     "lint": "eslint src --ext .ts,.tsx,.js --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "server": "npm --prefix backend run dev",
+    "server:install": "npm --prefix backend install",
+    "gguf:info": "npm --prefix backend run gguf:info"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

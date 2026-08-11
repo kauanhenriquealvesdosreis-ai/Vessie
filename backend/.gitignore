@@ -12,6 +12,20 @@ dist
 dist-ssr
 *.local
 
+# Modelos GGUF locais (arquivos muito grandes)
+*.gguf
+models/*
+!models/.gitkeep
+
+# Variáveis de ambiente com segredos
+.env
+!**/.env.example
+
+# Estado de runtime gerado automaticamente pelo servidor
+vessieai-core/memory/Memory.md
+vessieai-core/sharing/Share-Thinking.md
+vessieai-core/cache/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
