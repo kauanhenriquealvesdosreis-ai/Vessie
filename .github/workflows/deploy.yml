@@ -1,16 +1,10 @@
-# Workflow único de deploy para GitHub Pages (Vite + React)
+# Workflow de deploy para GitHub Pages (React + Vite)
 #
-# Substitui os dois workflows conflitantes que vieram no projeto:
-#   - jekyll-gh-pages.yml  (builda como site Jekyll -> não builda o Vite)
-#   - static.yml           (só copia os arquivos como estão -> não builda o Vite)
+# O build roda automaticamente a cada push na branch main (ou manualmente
+# pela aba "Actions" -> "Deploy site (Vite) to GitHub Pages" -> Run workflow).
 #
-# COMO USAR:
-# 1. Apague os dois arquivos antigos em .github/workflows/
-# 2. Coloque este arquivo em .github/workflows/deploy.yml
-# 3. Ajuste a linha "working-directory" abaixo se o seu package.json
-#    estiver dentro de uma subpasta (ex: "backend"). Se o package.json
-#    estiver na raiz do repositório, apague as linhas "working-directory".
-# 4. No GitHub: Settings > Pages > Source = "GitHub Actions"
+# PRÉ-REQUISITO (uma vez por repositório):
+#   GitHub > Repositório > Settings > Pages > Source = "GitHub Actions"
 
 name: Deploy site (Vite) to GitHub Pages
 
@@ -31,12 +25,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        # ATENÇÃO: troque "backend" pelo nome da pasta que contém o
-        # package.json do seu projeto Vite. Se o package.json estiver
-        # na raiz do repo, apague esta seção "defaults".
-        working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,7 +34,6 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -60,7 +47,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: backend/dist
+          path: dist
 
   deploy:
     environment:

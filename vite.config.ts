@@ -17,6 +17,9 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  // Base path necessário para o GitHub Pages (site de projeto servido em /Vessie/).
+  // Em produção o build gera caminhos absolutos com o prefixo; em dev fica "/".
+  base: process.env.NODE_ENV === 'production' ? '/Vessie/' : '/',
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if
