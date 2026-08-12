@@ -1,5 +1,5 @@
 // Utilitário: mostra o estado do motor GGUF (sem iniciar a API).
-// Uso: npm run gguf:info   (na pasta backend) ou node scripts/gguf-info.js
+// Uso: npm run gguf:info   ou node scripts/gguf-info.js
 import 'dotenv/config';
 import { GgufProvider } from '../vessieai-core/providers/ggufProvider.js';
 

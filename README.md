@@ -6,22 +6,23 @@ modelos **GGUF** (arquitetura llama.cpp) diretamente na sua máquina.
 ## Estrutura
 
 ```
-├─ src/                ← Frontend (React + Vite + TypeScript)
-├─ .github/workflows/  ← Deploy automático do frontend no GitHub Pages
-├─ backend/            ← Servidor local de IA (Node + Express + WebSocket)
-│  ├─ server.js        ← API REST + WebSocket + rota GGUF
-│  ├─ vessieai-core/   ← Sistemas (providers, memória, emoções, thinking, agentes…)
-│  ├─ scripts/         ← utilitários (gguf-info)
-│  └─ models/          ← (opcional) outra pasta para modelos .gguf
+├─ server.js           ← Servidor local (Express + WebSocket) — roda tudo
+├─ vessieai-core/      ← Núcleo de IA (Node): providers, memória, emoções, thinking, agentes, dublagem…
+├─ public/             ← Interface web (assets estáticos servidos em :3000)
 ├─ models/             ← ★ coloque aqui o seu arquivo LocalModel.gguf
+├─ scripts/            ← utilitários (gguf-info)
+├─ .env                ← configuração (modelo de IA, temperatura, sistemas…)
+├─ src/                ← Frontend React (Vite) — deploy no GitHub Pages
+├─ .github/workflows/  ← Deploy automático do frontend no GitHub Pages
 └─ README.md
 ```
 
-## Rodando a interface
+## Rodando
 
 ```bash
-npm i
-npm run dev        # frontend em http://localhost:5173
+npm i                 # instala frontend + dependências do servidor
+npm run server        # API local em http://localhost:3000 (node server.js)
+npm run dev           # frontend Vite em http://localhost:5173 (GitHub Pages)
 ```
 
 ## 🧠 IA local com GGUF (LocalModel.gguf)

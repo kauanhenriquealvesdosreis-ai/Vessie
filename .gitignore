@@ -13,3 +13,10 @@ models/*
 
 # Dados gerados em runtime
 vessels-data/
+
+# Estado de runtime gerado automaticamente pelo VessieCore
+vessieai-core/memory/Memory.md
+vessieai-core/sharing/Share-Thinking.md
+vessieai-core/cache/
+vessieai-core/context/saved/
+vessieai-core/skills/saved/

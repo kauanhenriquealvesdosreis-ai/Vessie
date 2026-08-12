@@ -37,6 +37,8 @@ if not exist "vessieai-core\sharing" mkdir "vessieai-core\sharing"
 echo [INFO] Iniciando Vessie AI em http://localhost:3000
 echo [INFO] Pressione Ctrl+C para parar
 echo.
+:loop
 node server.js
+goto loop
 
 pause
