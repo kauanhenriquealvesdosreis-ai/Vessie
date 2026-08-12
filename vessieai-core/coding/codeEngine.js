@@ -3,8 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CODEBASE_DIR = path.join(__dirname, '..', '..', 'codebase');
-const EXAMPLES_DIR = path.join(__dirname, '..', '..', 'examples');
+const CODEBASE_DIR = path.join(__dirname, '..', 'codebase');
+const EXAMPLES_DIR = path.join(__dirname, '..', 'examples');
 
 export class CodeEngine {
   constructor(providers, search) {

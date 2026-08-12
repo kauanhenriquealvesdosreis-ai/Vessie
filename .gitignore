@@ -20,3 +20,23 @@ vessieai-core/sharing/Share-Thinking.md
 vessieai-core/cache/
 vessieai-core/context/saved/
 vessieai-core/skills/saved/
+
+# Arquivos temporários
+tmp_*
+
+# Logs
+*.log
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+
+# Diretórios gerados em runtime
+codebase/
+examples/
+projects/
+backend/

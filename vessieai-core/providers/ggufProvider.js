@@ -14,9 +14,7 @@ function defaultModelDirs() {
   return [
     process.env.GGUF_MODEL_DIR,
     path.resolve(cwd, 'models'),               // <repo>/models
-    path.resolve(cwd, 'backend', 'models'),    // <repo>/backend/models
-    path.resolve(__dirname, '..', '..', 'models'),   // backend/models
-    path.resolve(__dirname, '..', '..', '..', 'models'), // <repo>/models
+    path.resolve(__dirname, '..', '..', 'models'),   // <repo>/models (via vessieai-core)
     cwd,
   ].filter(Boolean);
 }
@@ -75,9 +73,9 @@ export class GgufProvider {
     if (!this.modelPath) {
       this.status = 'error';
       this.ready = false;
-      this.message =
+            this.message =
         'Nenhum modelo .gguf encontrado. Coloque LocalModel.gguf na pasta models/ ' +
-        '(na raiz do projeto ou em backend/models) ou defina GGUF_MODEL_PATH no .env.';
+        '(na raiz do projeto) ou defina GGUF_MODEL_PATH no .env.';
       console.warn(`[GgufProvider] ${this.message}`);
       return false;
     }

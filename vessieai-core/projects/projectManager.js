@@ -1,5 +1,9 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROJECTS_DIR = path.join(__dirname, '..', 'projects');
 
 const LANGUAGE_EXTENSIONS = {
   js: 'JavaScript', ts: 'TypeScript', tsx: 'TypeScript React', jsx: 'JavaScript React',
@@ -19,7 +23,7 @@ const LANGUAGE_KEYWORDS = {
 
 export class ProjectManager {
   constructor() {
-    this.selectedPath = process.env.PROJECTS_BASE_DIR || './projects';
+    this.selectedPath = process.env.PROJECTS_BASE_DIR || PROJECTS_DIR;
     this.selectedProject = null;
   }
 
@@ -28,8 +32,8 @@ export class ProjectManager {
     this.selectedProject = path.basename(projectPath);
   }
 
-  async list() {
-    const baseDir = process.env.PROJECTS_BASE_DIR || './projects';
+      async list() {
+    const baseDir = process.env.PROJECTS_BASE_DIR || PROJECTS_DIR;
     try {
       await fs.mkdir(baseDir, { recursive: true });
       const entries = await fs.readdir(baseDir, { withFileTypes: true });

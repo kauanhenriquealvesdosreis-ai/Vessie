@@ -17,9 +17,8 @@ For example:
 * Refactor code as you go to keep code clean
 * Keep file sizes small and put helper functions and components in their own files.
 
---------------
-
 # Design system guidelines
+
 Rules for how the AI should make generations look like your company's design system
 
 Additionally, if you select a design system to use in the prompt box, you can reference

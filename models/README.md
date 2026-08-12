@@ -16,19 +16,17 @@ Coloque aqui o seu arquivo de modelo no formato **GGUF** para o Vessie usá-lo.
      LocalModel.gguf   ← coloque aqui
    ```
 
-3. Inicie o servidor (o backend detecta o arquivo automaticamente):
+3. Inicie o servidor (o servidor detecta o arquivo automaticamente):
 
    ```bash
    npm run server          # na raiz do projeto
-   # ou
-   cd backend && npm run dev
    ```
 
 4. Acesse **http://localhost:3000** e use a aba de chat com o provider `gguf`.
 
 > O sistema procura automaticamente por qualquer arquivo `.gguf` também
-> em `backend/models/` e na raiz. Você também pode apontar um caminho exato
-> definindo `GGUF_MODEL_PATH` no arquivo `backend/.env`.
+> em `models/` (na raiz do repositório). Você também pode apontar um caminho
+> exato definindo `GGUF_MODEL_PATH` no arquivo `.env` (via `.env.example`).
 
 ## Dicas de tamanho
 

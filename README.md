@@ -8,12 +8,18 @@ modelos **GGUF** (arquitetura llama.cpp) diretamente na sua máquina.
 ```
 ├─ server.js           ← Servidor local (Express + WebSocket) — roda tudo
 ├─ vessieai-core/      ← Núcleo de IA (Node): providers, memória, emoções, thinking, agentes, dublagem…
-├─ public/             ← Interface web (assets estáticos servidos em :3000)
-├─ models/             ← ★ coloque aqui o seu arquivo LocalModel.gguf
-├─ scripts/            ← utilitários (gguf-info)
-├─ .env                ← configuração (modelo de IA, temperatura, sistemas…)
 ├─ src/                ← Frontend React (Vite) — deploy no GitHub Pages
+├─ public/             ← Assets estáticos servidos em :3000
+├─ models/             ← ★ coloque aqui o seu arquivo LocalModel.gguf
+├─ scripts/            ← Utilitários (gguf-info)
+├─ docs/               ← Documentação do projeto
+├─ vessels-data/       ← Dados gerados em runtime (chat, projetos…)
+├─ .env                ← Configuração (IA_PROVIDER, temperatura, sistemas…)
 ├─ .github/workflows/  ← Deploy automático do frontend no GitHub Pages
+├─ vite.config.ts      ← Configuração do Vite (frontend)
+├─ tsconfig.json       ← Configuração TypeScript
+├─ eslint.config.js    ← Configuração ESLint
+├─ postcss.config.mjs  ← Configuração PostCSS
 └─ README.md
 ```
 
@@ -49,7 +55,7 @@ precisar de LM Studio.
 3. Inicie o servidor:
 
    ```bash
-   npm run server        # ou: cd backend && npm run dev
+   npm run server        # sobe o servidor em http://localhost:3000
    ```
 
 4. Acesse o servidor (e deixe o frontend apontando para ele):
@@ -58,9 +64,9 @@ precisar de LM Studio.
    - Status do modelo: **http://localhost:3000/api/gguf/status**
    - Chat OpenAI-compatível: `POST http://localhost:3000/v1/chat/completions`
 
-> O servidor detecta automaticamente o `.gguf` em `models/`,
-> `backend/models/`, na raiz, ou em um caminho definido por
-> `GGUF_MODEL_PATH` no `backend/.env` (veja `backend/.env.example`).
+> O servidor detecta automaticamente o `.gguf` em `models/`, na raiz
+> do repositório, ou em um caminho definido por `GGUF_MODEL_PATH` no
+> `.env` (veja `.env.example`).
 
 ```bash
 npm run gguf:info     # mostra se o modelo GGUF foi encontrado/carregado
