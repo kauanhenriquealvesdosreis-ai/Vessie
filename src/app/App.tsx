@@ -5,6 +5,7 @@ import {
   PanelLeft, Brain, BookOpen, Layers, FolderOpen, Zap, Search,
   ChevronRight, Smile, RefreshCw, Play, Eye, Lightbulb, Target,
   Sparkles, Globe, Code, FileText, ArrowRight, Database,
+  Volume2, Languages, Radio,
 } from "lucide-react";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -113,10 +114,27 @@ export default function App() {
   const [projects, setProjects] = useState<any[]>([]);
   const [projectFiles, setProjectFiles] = useState<any[]>([]);
 
+  // ── Dublagem / Tradução (idiomas) ──
+  const [dubLang, setDubLang] = useState<string>("pt-BR");
+  const [dubLangs, setDubLangs] = useState<any[]>([
+    { code: "pt-BR", name: "Portuguese (Brazil)", native: "Português (Brasil)" },
+    { code: "en", name: "English", native: "English" },
+    { code: "es", name: "Spanish", native: "Español" },
+    { code: "fr", name: "French", native: "Français" },
+    { code: "de", name: "German", native: "Deutsch" },
+    { code: "ja", name: "Japanese", native: "日本語" },
+    { code: "ko", name: "Korean", native: "한국어" },
+    { code: "zh", name: "Chinese (Simplified)", native: "中文" },
+  ]);
+  const [dubResult, setDubResult] = useState<string | null>(null);
+  const [autoDub, setAutoDub] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modelDropRef = useRef<HTMLDivElement>(null);
+  const lastSpokenRef = useRef<string>("");
 
   const activeConv = conversations.find(c => c.id === activeId) ?? null;
 
@@ -149,6 +167,7 @@ export default function App() {
         setSelectedProvider(cfg.provider || "lmstudio");
         setSelectedModel(cfg.model || "local-model");
         fetchModels();
+        fetchDubLangs();
         fetchEmotion();
       }
     } catch {}
@@ -170,6 +189,16 @@ export default function App() {
     try {
       const r = await fetch(`${BACKEND}/api/models`);
       if (r.ok) { const d = await r.json(); setModels(d.models || []); }
+    } catch {}
+  }
+
+  async function fetchDubLangs() {
+    try {
+      const r = await fetch(`${BACKEND}/api/dub/languages`);
+      if (r.ok) {
+        const d = await r.json();
+        if (d.languages?.length) setDubLangs(d.languages);
+      }
     } catch {}
   }
 
@@ -356,6 +385,64 @@ export default function App() {
     setAgentRunning(false);
   }
 
+  // ─── Dublagem / Tradução de idiomas ─────────────────────────────────────
+  function speakText(text: string, lang: string) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    u.rate = 1;
+    u.pitch = 1;
+    const base = (lang || "en").split("-")[0].toLowerCase();
+    const voices = synth.getVoices();
+    const v = voices.find(vo => (vo.lang || "").replace("_", "-").toLowerCase().startsWith(base));
+    if (v) u.voice = v;
+    setSpeaking(true);
+    u.onend = () => setSpeaking(false);
+    u.onerror = () => setSpeaking(false);
+    synth.speak(u);
+  }
+
+  function lastAssistantText(): string {
+    if (!activeConv) return "";
+    const last = [...activeConv.messages].reverse().find(m => m.role === "assistant");
+    return last?.content ?? "";
+  }
+
+  async function translateReply() {
+    const text = lastAssistantText() || input;
+    if (!text) return;
+    setDubResult("Traduzindo…");
+    try {
+      const r = await fetch(`${BACKEND}/api/dub/translate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, to: dubLang }),
+      });
+      const d = await r.json();
+      setDubResult(d.translatedText ?? d.error ?? "Sem resultado");
+    } catch (e: any) {
+      setDubResult(`⚠️ Erro: ${e.message}`);
+    }
+  }
+
+  function dubReply() {
+    const text = lastAssistantText();
+    if (text) speakText(text, dubLang);
+  }
+
+  useEffect(() => {
+    if (!autoDub) return;
+    const msgs = activeConv?.messages || [];
+    const last = msgs[msgs.length - 1];
+    if (last && last.role === "assistant" && last.content && lastSpokenRef.current !== last.content) {
+      lastSpokenRef.current = last.content;
+      speakText(last.content, dubLang);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConv?.messages, autoDub, dubLang]);
+
   // ─── Renders ─────────────────────────────────────────────────────────────
 
   const TABS: { id: Tab; icon: JSX.Element; label: string }[] = [
@@ -494,6 +581,33 @@ export default function App() {
           {tab === "projects" && <ProjectsPanel projects={projects} files={projectFiles} setFiles={setProjectFiles} backendOnline={backendOnline} />}
           {tab === "settings" && <SettingsPanel config={config} lmUrl={lmUrl} setLmUrl={setLmUrl} emotion={emotion} backendOnline={backendOnline} onSave={async (updates) => { setConfig((p: any) => ({ ...p, ...updates })); if (backendOnline) await fetch(`${BACKEND}/api/config`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) }); }} />}
         </div>
+
+        {/* Dublagem / Tradução de idiomas (só no chat) */}
+        {tab === "chat" && (
+          <div className="px-4 pt-2 shrink-0 bg-background">
+            <div className="max-w-3xl mx-auto flex items-center gap-2 flex-wrap">
+              <button onClick={dubReply} disabled={!lastAssistantText()} title="Falar a última resposta (dublagem por voz)" className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${speaking ? "bg-[#10a37f]/20 border-[#10a37f]/40 text-[#10a37f]" : "border-white/10 text-muted-foreground hover:text-foreground disabled:opacity-40"}`}>
+                <Volume2 size={12} />{speaking ? "Dublando…" : "Dublar"}
+              </button>
+              <button onClick={translateReply} title="Traduzir a última resposta para o idioma selecionado" disabled={!lastAssistantText() && !input.trim()} className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-white/10 text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors">
+                <Languages size={12} />Traduzir
+              </button>
+              <select value={dubLang} onChange={e => setDubLang(e.target.value)} title="Idioma de destino (tradução/dublagem)" className="bg-[#1a1a1a] border border-white/10 rounded-full text-xs px-2.5 py-1 text-muted-foreground outline-none focus:border-[#10a37f]/40 max-w-[180px] cursor-pointer">
+                {dubLangs.map(l => <option key={l.code} value={l.code}>{l.native || l.name}</option>)}
+              </select>
+              <button onClick={() => setAutoDub(v => !v)} title="Falar cada resposta automaticamente" className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${autoDub ? "bg-[#10a37f]/20 border-[#10a37f]/40 text-[#10a37f]" : "border-white/10 text-muted-foreground hover:text-foreground"}`}>
+                <Radio size={12} />Auto-dublar {autoDub ? "ON" : "OFF"}
+              </button>
+              {dubResult && (
+                <button onClick={() => setDubResult(null)} title="Fechar tradução" className="flex-1 min-w-[220px] relative text-left text-xs px-3 py-1.5 pr-6 rounded-lg bg-white/[0.04] border border-white/10 text-foreground/90 hover:border-[#10a37f]/40 transition-colors">
+                  <span className="absolute top-1.5 right-2 text-muted-foreground">✕</span>
+                  <span className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Tradução ({dubLang})</span>
+                  <span className="whitespace-pre-wrap">{dubResult}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Input (só no chat) */}
         {tab === "chat" && (

@@ -9,6 +9,7 @@ import { ShareThinking } from './sharing/shareThinking.js';
 import { WebSearch } from './search/webSearch.js';
 import { ProjectManager } from './projects/projectManager.js';
 import { CodeEngine } from './coding/codeEngine.js';
+import { DubbingEngine } from './dubbing/dubbingEngine.js';
 
 export class VessieCore {
   constructor() {
@@ -23,6 +24,7 @@ export class VessieCore {
     this.search = null;
     this.projects = null;
     this.codeEngine = null;
+    this.dubbing = new DubbingEngine();
   }
 
   async init() {
@@ -46,6 +48,7 @@ export class VessieCore {
       this.context.init(),
       this.sharing.init(),
       this.codeEngine.init(),
+      this.dubbing.languages().catch(() => {}),
     ]);
 
     console.log('[VessieCore] ✓ Todos os sistemas prontos');

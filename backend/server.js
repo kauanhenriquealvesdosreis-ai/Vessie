@@ -340,6 +340,35 @@ app.post('/api/questionnaire', async (req, res) => {
   res.json({ focus });
 });
 
+// ─── Dublagem / Tradução de idiomas ────────────────────────────────────────────
+app.get('/api/dub/languages', async (req, res) => {
+  try {
+    const languages = await core.dubbing.languages();
+    res.json({ languages, status: core.dubbing.status() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/dub/translate', async (req, res) => {
+  try {
+    const { text, from, to } = req.body || {};
+    const result = await core.dubbing.translate(text, to, from || 'auto');
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/dub/detect', async (req, res) => {
+  try {
+    const language = await core.dubbing.detect((req.body || {}).text || '');
+    res.json({ language });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── GGUF (modelo local) ───────────────────────────────────────────────────────
 app.get('/api/gguf/status', (req, res) => res.json(core.providers.gguf.statusJSON()));
 

@@ -77,6 +77,21 @@ npm run gguf:info     # mostra se o modelo GGUF foi encontrado/carregado
 > Sem um `.gguf` presente, o sistema cai automaticamente para LM Studio
 > (ou o que estiver configurado no `.env`).
 
+## 🌍 Dublagem / Tradução de idiomas
+
+O Vessie traduz e "dubla" conversas para **mais de 130 idiomas** usando o
+backend (`vessieai-core/dubbing` — Google Translate + LibreTranslate) e a
+**síntese de voz via Web Speech API** no navegador.
+
+Na aba **Chat**, use a barra de dublagem (acima do campo de digitação):
+- 🇧🇷 **seletor de idioma** — escolha o idioma de destino (PT, EN, ES, JA, …).
+- 🔊 **Dublar** — fala a última resposta da IA com voz local do navegador.
+- **Traduzir** — mostra a última resposta traduzida para o idioma escolhido.
+- **Auto-dublar** — fala cada nova resposta automaticamente.
+
+Endpoints: `GET /api/dub/languages`, `POST /api/dub/translate`,
+`POST /api/dub/detect`.
+
 ## Deploy no GitHub Pages
 
 O site é publicado automaticamente pelo workflow em `.github/workflows/deploy.yml`

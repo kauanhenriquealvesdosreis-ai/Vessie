@@ -28,6 +28,9 @@ em `backend/models/` ou defina `GGUF_MODEL_PATH` no `.env`.
 | GET  | `/v1/models` | Lista de modelos (compatível com OpenAI) |
 | POST | `/v1/chat/completions` | Chat completions (com/sem streaming, compat. OpenAI) |
 | WS   | `ws://localhost:3000` | Chat com streaming via WebSocket |
+| GET  | `/api/dub/languages` | Lista de idiomas para dublagem/tradução (133+) |
+| POST | `/api/dub/translate` | Traduz texto para qualquer idioma `{ text, to, from? }` |
+| POST | `/api/dub/detect` | Detecta o idioma de um texto `{ text }` |
 
 ## Estrutura
 
@@ -40,6 +43,7 @@ backend/
 ├─ vessieai-core/             ← todos os sistemas de IA
 │  ├─ index.js                ← orquestra o VessieCore
 │  ├─ providers/              ← gguf, lmstudio, openai, anthropic
+│  ├─ dubbing/                ← dublagem/tradução de idiomas (133+)
 │  ├─ thinking/               ← pensar (DeepSeek R1 style), correção de ortografia
 │  ├─ memory/                 ← memória de longo prazo
 │  ├─ personality/            ← emoções / vida
