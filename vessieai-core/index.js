@@ -10,6 +10,14 @@ import { WebSearch } from './search/webSearch.js';
 import { ProjectManager } from './projects/projectManager.js';
 import { CodeEngine } from './coding/codeEngine.js';
 import { DubbingEngine } from './dubbing/dubbingEngine.js';
+import { TagSystem } from './core/tagSystem.js';
+import { TokenCompressor } from './compression/tokenCompressor.js';
+import { ResponseCache } from './cache/responseCache.js';
+import { SecureStorage } from './storage/secureStorage.js';
+import { McpManager } from './mcp/mcpManager.js';
+import { MultiAgentManager } from './managers/multiAgentManager.js';
+import { AutoEvolution } from './automation/autoEvolution.js';
+import { PatchManager } from './patches/patchManager.js';
 
 export class VessieCore {
   constructor() {
@@ -25,6 +33,14 @@ export class VessieCore {
     this.projects = null;
     this.codeEngine = null;
     this.dubbing = new DubbingEngine();
+    this.tags = null;
+    this.compressor = null;
+    this.cache = null;
+    this.storage = null;
+    this.mcp = null;
+    this.multiAgent = null;
+    this.autoEvolution = null;
+    this.patches = null;
   }
 
   async init() {
@@ -39,7 +55,22 @@ export class VessieCore {
     this.sharing = new ShareThinking(this.providers);
     this.projects = new ProjectManager();
     this.codeEngine = new CodeEngine(this.providers, this.search);
-    this.agentLoop = new AgentLoop(this.providers);
+    this.tags = new TagSystem(this.providers);
+    this.compressor = new TokenCompressor();
+    this.cache = new ResponseCache();
+    this.storage = new SecureStorage();
+    this.mcp = new McpManager();
+    this.multiAgent = new MultiAgentManager(this.providers);
+    this.autoEvolution = new AutoEvolution(this.providers);
+    this.patches = new PatchManager(this.providers);
+
+    // AgentLoop com dependências (memória, compartilhamento, tags)
+    this.agentLoop = new AgentLoop(this.providers, {
+      memory: this.memory,
+      context: this.context,
+      sharing: this.sharing,
+      tags: this.tags,
+    });
 
     await Promise.all([
       this.memory.init(),
@@ -48,8 +79,16 @@ export class VessieCore {
       this.context.init(),
       this.sharing.init(),
       this.codeEngine.init(),
+      this.autoEvolution.init(),
+      this.patches.init(),
       this.dubbing.languages().catch(() => {}),
     ]);
+
+    // Conecta servidores MCP configurados (não bloqueia se não houver)
+    this.mcp.connectAll().catch(() => {});
+
+    // Auto-sustentação (fundo) quando habilitado
+    if (process.env.AUTO_SUSTAIN === 'true') this.autoEvolution.scheduleAutoSustain();
 
     console.log('[VessieCore] ✓ Todos os sistemas prontos');
     console.log(`[VessieCore] ✓ Provider: ${process.env.AI_PROVIDER}`);
@@ -57,5 +96,8 @@ export class VessieCore {
     console.log(`[VessieCore] ✓ Emoções: ${process.env.EMOTION_SYSTEM === 'true' ? 'ON' : 'OFF'}`);
     console.log(`[VessieCore] ✓ Memória: ${process.env.MEMORY_ENABLED === 'true' ? 'ON' : 'OFF'}`);
     console.log(`[VessieCore] ✓ Thinking: ${process.env.THINK_MODE}`);
+    console.log(`[VessieCore] ✓ Tags: ${process.env.TAGS_ENABLED !== 'false' ? 'ON' : 'OFF'}`);
+    console.log(`[VessieCore] ✓ MCP: ${this.mcp.servers.length} servidor(es)`);
+    console.log(`[VessieCore] ✓ DM-only: ${process.env.DM_ONLY === 'true' ? 'SEGURO' : 'OFF'}`);
   }
 }

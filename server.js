@@ -18,6 +18,25 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ─── Segurança DM-only (acesso somente por DM/token seguro) ────────────────────
+// Quando DM_ONLY=true, TODAS as rotas /api exigem o token DM_TOKEN no header
+// 'x-dm-token' (ou o campo token no body). Sem token/errado → 401.
+function isDm(int) {
+  const token = int.headers?.['x-dm-token'] || int.headers?.['x-dmtoken'] || (int.body && int.body.token);
+  return core.storage?.isAuthorized(token);
+}
+app.use('/api', (req, res, next) => {
+  if (process.env.DM_ONLY !== 'true') return next();
+  if (req.path === '/health') return next();
+  if (req.path.startsWith('/dub')) return next(); // dublagem é público
+  if (isDm(req)) return next();
+  return res.status(401).json({ error: 'Acesso negado: requisição não autorizada (DM-only). Envie o token.' });
+});
+
+// ─── Helpers de resposta de erro/unificação ────────────────────────────────────
+const ok = (res, data) => res.json({ ok: true, ...data });
+const fail = (res, status, msg) => res.status(status || 500).json({ ok: false, error: msg });
+
 // ─── WebSocket ─────────────────────────────────────────────────────────────────
 wss.on('connection', (ws) => {
   ws.on('message', async (raw) => {
@@ -51,16 +70,32 @@ async function handleStreamingChat(ws, payload) {
       enhancedMessages[enhancedMessages.length - 1] = { ...lastMsg, content: enhanced };
     }
 
-    // Construir system prompt com personalidade e memória
+    // Construir system prompt com personalidade, memória, tags e contexto MCP
     const systemPrompt = await core.personality.buildSystemPrompt(conversationId);
     const memory = await core.memory.getRelevant(lastMsg.content);
+    const tagInstructions = core.tags ? core.tags.buildTagInstructions() : '';
+    let mcpContext = '';
+    try { if (core.mcp) mcpContext = await core.mcp.buildContext(lastMsg.content); } catch {}
 
     const fullMessages = [
-      { role: 'system', content: systemPrompt + (memory ? `\n\n[MEMÓRIA]\n${memory}` : '') },
+      { role: 'system', content: systemPrompt
+        + (memory ? `\n\n[MEMÓRIA]\n${memory}` : '')
+        + (tagInstructions ? `\n\n${tagInstructions}` : '')
+        + (mcpContext ? `\n\n[FERRAMENTAS/RECURSOS DISPONÍVEIS]\n${mcpContext}` : '') },
       ...enhancedMessages
     ];
 
     send({ type: 'start', conversationId });
+
+    // Verificar cache de resposta (mesma pergunta já respondida → reutiliza)
+    const forceFresh = options.forceFresh === true || process.env.RESPONSE_CACHE_ENABLED !== 'true';
+    let cached = null;
+    if (!forceFresh && core.cache) cached = core.cache.get(lastMsg.content);
+    if (cached && cached.response) {
+      send({ type: 'chunk', content: cached.response });
+      send({ type: 'done', content: cached.response, cached: true, variantCount: cached.variantCount });
+      return;
+    }
 
     // Think tags (manual/auto)
     const thinkMode = process.env.THINK_MODE || 'auto';
@@ -89,6 +124,11 @@ async function handleStreamingChat(ws, payload) {
         send({ type: 'chunk', content: chunk });
       }
     );
+
+    // Armazenar no cache para próxima vez (evita reuso da API)
+    if (core.cache && process.env.RESPONSE_CACHE_ENABLED === 'true') {
+      core.cache.set(lastMsg.content, fullContent, core.providers).catch(() => {});
+    }
 
     send({ type: 'done', content: fullContent });
 
@@ -368,6 +408,138 @@ app.post('/api/dub/detect', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ─── Tags System (<Think>, <Code>, <Interpretagem>) ───────────────────────────
+app.get('/api/tags/status', (req, res) => res.json({
+  enabled: process.env.TAGS_ENABLED !== 'false',
+  mode: process.env.TAG_MODE || 'auto',
+  instructions: core.tags ? core.tags.buildTagInstructions() : '',
+}));
+app.post('/api/tags/parse', (req, res) => {
+  if (!core.tags) return fail(res, 500, 'Tags nao inicializado');
+  res.json({ parsed: core.tags.parse(req.body.content || '') });
+});
+app.post('/api/tags/interpret', async (req, res) => {
+  try {
+    const questions = core.tags ? await core.tags.interpret(req.body.prompt || '') : null;
+    res.json({ questions });
+  } catch (err) { fail(res, 500, err.message); }
+});
+
+app.post('/api/tags/variant', async (req, res) => {
+  try { const slug = await core.tags.saveVariant(req.body.name, req.body.content, req.body.tags); ok(res, { slug }); }
+  catch (err) { fail(res, 500, err.message); }
+});
+
+// ─── Compressão avançada (token/código) ───────────────────────────────────────
+app.post('/api/compress/code', (req, res) => {
+  const { code, level = 'advanced' } = req.body || {};
+  const compressed = core.compressor.compressCode(code || '', level);
+  ok(res, { compressed, level, originalTokens: core.compressor.estimateTokens(code || ''), compressedTokens: core.compressor.estimateTokens(compressed) });
+});
+app.post('/api/compress/text', (req, res) => {
+  const el = req.body || {};
+  const compressed = core.compressor.compressText(el.text, el.maxLen);
+  ok(res, { compressed, length: compressed.length });
+});
+app.post('/api/compress/dub', async (req, res) => {
+  try { ok(res, await core.compressor.dubCode((req.body || {}).code || '', core.providers)); }
+  catch (err) { fail(res, 500, err.message); }
+});
+
+// ─── Cache de respostas (economia de tokens/API) ──────────────────────────────
+app.get('/api/cache', (req, res) => ok(res, { stats: core.cache.stats(), entries: core.cache.list ? core.cache.list() : [] }));
+app.delete('/api/cache', async (req, res) => { await core.cache.clear(); ok(res, { cleared: true }); });
+
+// ─── MCP (Model Context Protocol) ─────────────────────────────────────────────
+app.get('/api/mcp/status', (req, res) => res.json(core.mcp ? core.mcp.status() : { servers: 0 }));
+app.post('/api/mcp/connect', async (req, res) => {
+  try { const r = await core.mcp.connect(req.body || {}); ok(res, r); }
+  catch (err) { fail(res, 500, err.message); }
+});
+app.post('/api/mcp/connectAll', async (req, res) => {
+  try { ok(res, (await core.mcp.connectAll()) || []); }
+  catch (err) { fail(res, 500, err.message); }
+});
+app.post('/api/mcp/tool', async (req, res) => {
+  try { const r = await core.mcp.callTool((req.body || {}).name, (req.body || {}).args); ok(res, { result: r }); }
+  catch (err) { fail(res, 500, err.message); }
+});
+app.post('/api/mcp/register', (req, res) => {
+  core.mcp.register((req.body || {}).kind, (req.body || {}).item);
+  ok(res, { tools: core.mcp.tools.length });
+});
+
+// ─── Multi-Agent ──────────────────────────────────────────────────────────────
+app.get('/api/agents', (req, res) => res.json({ agents: core.multiAgent ? core.multiAgent.listAgents() : [] }));
+app.post('/api/agents/add', (req, res) => {
+  const a = core.multiAgent.addAgent(req.body || {});
+  res.json({ agent: a });
+});
+app.post('/api/agents/run', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const results = await core.multiAgent.execute(body.task || '', { provider: body.provider, model: body.model });
+    let consolidated = null;
+    if (body.consolidate !== false && results.length > 1) consolidated = await core.multiAgent.consolidate(body.task || '', results);
+    res.json({ results, consolidated });
+  } catch (err) { fail(res, 500, err.message); }
+});
+
+// ─── Auto-Evolução / Skills automáticas / Módulos ────────────────────────────
+app.post('/api/skills/generate', async (req, res) => {
+  try {
+    const body = req.body || {};
+    let slug;
+    if (body.description && body.result) slug = await core.skills.generate(body.description, body.result, core.providers);
+    else if (body.description) slug = await core.autoEvolution.generateSkill(body.description);
+    ok(res, { slug, name: slug });
+  } catch (err) { fail(res, 500, err.message); }
+});
+app.post('/api/evolution/forceModule', async (req, res) => {
+  try { const slug = await core.autoEvolution.forceModule((req.body || {}).context || ''); ok(res, { module: slug }); }
+  catch (err) { fail(res, 500, err.message); }
+});
+app.post('/api/evolution/evolveSkill', async (req, res) => {
+  try { const slug = await core.autoEvolution.evolveSkill((req.body || {}).name, (req.body || {}).info || ''); ok(res, { slug }); }
+  catch (err) { fail(res, 500, err.message); }
+});
+
+// ─── Patches (edição por linha sem recriar script) ───────────────────────────
+app.get('/api/patches', async (req, res) => ok(res, { patches: await core.patches.list() }));
+app.post('/api/patches/apply', async (req, res) => {
+  try { ok(res, { code: core.patches.applyPatch((req.body || {}).code || '', (req.body || {}).edits || []) }); }
+  catch (err) { fail(res, 500, err.message); }
+});
+app.post('/api/patches/generate', async (req, res) => {
+  try { ok(res, { code: await core.patches.generatePatch((req.body || {}).code || '', (req.body || {}).instruction || '') }); }
+  catch (err) { fail(res, 500, err.message); }
+});
+
+// ─── Storage seguro (DM-only, AES-256-GCM) ───────────────────────────────────
+app.get('/api/storage/list', async (req, res) => {
+  try { ok(res, { keys: await core.storage.list((req.body || {}).token) }); }
+  catch (err) { fail(res, 401, err.message); }
+});
+app.post('/api/storage/save', async (req, res) => {
+  try { ok(res, await core.storage.save((req.body || {}).key, (req.body || {}).value, (req.body || {}).token)); }
+  catch (err) { fail(res, 401, err.message); }
+});
+app.post('/api/storage/read', async (req, res) => {
+  try { ok(res, { value: await core.storage.read((req.body || {}).key, (req.body || {}).token) }); }
+  catch (err) { fail(res, 401, err.message); }
+});
+
+// ─── Web Tools (extração/navegação CLI para pesquisa avançada) ───────────────
+app.post('/api/search/page', async (req, res) => {
+  try { ok(res, { text: await core.search.fetchPage((req.body || {}).url || '') }); }
+  catch (err) { fail(res, 500, err.message); }
+});
+
+// ─── Health ───────────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => ok(res, {
+  status: 'online', dmOnly: process.env.DM_ONLY === 'true', modules: Object.keys(core).filter(k => core[k]).length,
+}));
 
 // ─── GGUF (modelo local) ───────────────────────────────────────────────────────
 app.get('/api/gguf/status', (req, res) => res.json(core.providers.gguf.statusJSON()));

@@ -1,0 +1,4 @@
+{
+  "_comentario": "Servidores MCP (Model Context Protocol). Formato compatível com Cline/Copilot. Adicione servidores externos aqui. Ex.: {\"name\": \"Vessie-MCP\", \"type\": \"stdio\", \"command\": \"npx\", \"args\": [\"-y\", \"@server/vessie-mcp\"]}",
+  "servers": []
+}

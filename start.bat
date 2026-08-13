@@ -28,10 +28,14 @@ if not exist "node_modules" (
 if not exist "public" mkdir public
 if not exist "vessels-data" mkdir vessels-data
 if not exist "projects" mkdir projects
+if not exist "Module" mkdir Module
 if not exist "vessieai-core\skills\saved" mkdir "vessieai-core\skills\saved"
 if not exist "vessieai-core\context\saved" mkdir "vessieai-core\context\saved"
 if not exist "vessieai-core\cache" mkdir "vessieai-core\cache"
 if not exist "vessieai-core\sharing" mkdir "vessieai-core\sharing"
+if not exist "vessieai-core\patches" mkdir "vessieai-core\patches"
+if not exist "vessieai-core\storage" mkdir "vessieai-core\storage"
+if not exist "vessieai-core\sources" mkdir "vessieai-core\sources"
 
 :: Iniciar servidor
 echo [INFO] Iniciando Vessie AI em http://localhost:3000
