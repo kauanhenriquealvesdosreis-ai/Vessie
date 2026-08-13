@@ -6,6 +6,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { VessieCore } from './vessieai-core/index.js';
+import { detectLanguage, buildLanguageInstruction } from './vessieai-core/core/languageDetector.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -36,6 +37,25 @@ app.use('/api', (req, res, next) => {
 // ─── Helpers de resposta de erro/unificação ────────────────────────────────────
 const ok = (res, data) => res.json({ ok: true, ...data });
 const fail = (res, status, msg) => res.status(status || 500).json({ ok: false, error: msg });
+
+// Injeta uma instrução de idioma nas mensagens (para /api/chat e /v1/chat/completions).
+// Detecta o idioma da última mensagem do usuário e força a resposta no mesmo idioma.
+function withLanguageInstruction(messages) {
+  const chat = Array.isArray(messages) ? messages : [];
+  const lastUser = [...chat].reverse().find(m => (m.role || '').toLowerCase() === 'user');
+  const userText = lastUser?.content || '';
+  const instruction = buildLanguageInstruction(detectLanguage(userText).code);
+  const hasSystem = chat.some(m => (m.role || '').toLowerCase() === 'system');
+  const msg = instruction ? { role: 'system', content: instruction } : null;
+
+  if (!msg) return chat;
+  if (hasSystem) {
+    return chat.map(m => (m.role || '').toLowerCase() === 'system'
+      ? { ...m, content: m.content + (m.content ? '\n' : '') + msg.content }
+      : m);
+  }
+  return [msg, ...chat];
+}
 
 // ─── WebSocket ─────────────────────────────────────────────────────────────────
 wss.on('connection', (ws) => {
@@ -347,7 +367,7 @@ app.post('/api/chat', async (req, res) => {
     const response = await core.providers.chat(
       provider || process.env.AI_PROVIDER,
       model || process.env.AI_MODEL,
-      messages,
+      withLanguageInstruction(messages),
       options
     );
     res.json({ response });
@@ -564,6 +584,8 @@ app.get('/v1/models', async (req, res) => {
 
 app.post('/v1/chat/completions', async (req, res) => {
   const { messages, model, stream = false, temperature, max_tokens } = req.body || {};
+  // Força resposta no mesmo idioma do usuário
+  const langMessages = withLanguageInstruction(messages);
 
   if (stream) {
     res.setHeader('Content-Type', 'text/event-stream');
@@ -575,7 +597,7 @@ app.post('/v1/chat/completions', async (req, res) => {
     const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
 
     try {
-      await core.providers.streamChat('auto', model, messages, { temperature, maxTokens: max_tokens }, (chunk) => {
+      await core.providers.streamChat('auto', model, langMessages, { temperature, maxTokens: max_tokens }, (chunk) => {
         send({ ...mk(), choices: [{ index: 0, delta: { content: chunk } }] });
       });
       send({ ...mk(), choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] });
@@ -588,7 +610,7 @@ app.post('/v1/chat/completions', async (req, res) => {
   }
 
   try {
-    const content = await core.providers.chat('auto', model, messages, { temperature, maxTokens: max_tokens });
+    const content = await core.providers.chat('auto', model, langMessages, { temperature, maxTokens: max_tokens });
     res.json({
       id: `vessie-${Date.now()}`, object: 'chat.completion', created: Math.floor(Date.now() / 1000), model,
       choices: [{ index: 0, message: { role: 'assistant', content }, finish_reason: 'stop' }],
