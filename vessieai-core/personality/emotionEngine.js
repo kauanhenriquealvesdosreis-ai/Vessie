@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { detectLanguage, buildLanguageInstruction } from '../core/languageDetector.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LIFE_FILE = path.join(__dirname, 'Life.md');
@@ -163,10 +164,14 @@ export class EmotionEngine {
     }
   }
 
-  async buildSystemPrompt(conversationId) {
+  async buildSystemPrompt(conversationId, userText = '') {
     const e = this._getEmotionState();
     const life = this.lifeStory || '';
     const basePrompt = this.systemPromptBase || process.env.SYSTEM_PROMPT || '';
+
+    // Detecta o idioma da mensagem do usuário para a IA responder no mesmo idioma
+    const lang = detectLanguage(userText); // { code, name, score }
+    const langInstruction = buildLanguageInstruction(lang.code);
 
     let emotionSection = '';
     if (process.env.EMOTION_SYSTEM === 'true') {
@@ -190,7 +195,7 @@ Aja de acordo com este estado emocional de forma natural.`;
       ? '\n\n[NOTA] Você está desconfortável com a conversa atual. Pode expressar seus limites com assertividade.'
       : '';
 
-    return `${basePrompt}${emotionSection}${lifeSection}${adaptiveSection}${inappropriateWarning}
+    return `${basePrompt}${emotionSection}${lifeSection}${adaptiveSection}${inappropriateWarning}${langInstruction}
 
 [REGRAS DE COMUNICAÇÃO]
 - Fale como humano real, não como robô

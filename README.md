@@ -8,6 +8,15 @@ modelos **GGUF** (arquitetura llama.cpp) diretamente na sua máquina.
 ```
 ├─ server.js           ← Servidor local (Express + WebSocket) — roda tudo
 ├─ vessieai-core/      ← Núcleo de IA (Node): providers, memória, emoções, thinking, agentes, dublagem…
+│   ├─ agents/         → Agent Loop (observar → pensar → agir → resultado, com retry + memória)
+│   ├─ core/           → TagSystem (<Think>, <Code>, <Interpretagem>)
+│   ├─ compression/    → TokenCompressor (compressão código/texto, dublagem de código)
+│   ├─ cache/          → ResponseCache (reuso de respostas + variantes p/ economizar API)
+│   ├─ storage/        → SecureStorage (AES-256-GCM, acesso só por DM/token)
+│   ├─ mcp/            → McpManager (servidores MCP, tools/resources/prompts)
+│   ├─ managers/       → MultiAgentManager (time de modelos em paralelo)
+│   ├─ automation/     → AutoEvolution (skills automáticas, Force All Module, auto-sustentação)
+│   └─ patches/        → PatchManager (edição por linha, patches reutilizáveis)
 ├─ src/                ← Frontend React (Vite) — deploy no GitHub Pages
 ├─ public/             ← Assets estáticos servidos em :3000
 ├─ models/             ← ★ coloque aqui o seu arquivo LocalModel.gguf
@@ -98,6 +107,49 @@ Na aba **Chat**, use a barra de dublagem (acima do campo de digitação):
 
 Endpoints: `GET /api/dub/languages`, `POST /api/dub/translate`,
 `POST /api/dub/detect`.
+
+## 🧠 Sistemas avançados (VessieCore)
+
+Novos sistemas adicionados ao núcleo — todos configuráveis no `.env`:
+
+| Sistema | Descrição | Endpoints |
+|---------|-----------|-----------|
+| **TagSystem** | `<Think>` / `<Code>` / `<Interpretagem>` (auto/manual/off) | `/api/tags/*` |
+| **TokenCompressor** | Compressão de código/texto e dublagem de código → prompt | `/api/compress/*` |
+| **ResponseCache** | Reuso de respostas + N variantes (10) para economizar API | `/api/cache` |
+| **SecureStorage** | Criptografia AES-256-GCM, acesso somente por DM/token | `/api/storage/*` |
+| **McpManager** | Conexão a servidores MCP (tools/resources/prompts) | `/api/mcp/*` |
+| **MultiAgentManager** | Time de múltiplos modelos em paralelo + consolidação | `/api/agents/*` |
+| **AutoEvolution** | Skills automáticas, Force All Module e auto-sustentação | `/api/evolution/*`, `/api/skills/generate` |
+| **PatchManager** | Edição por linha / patches reutilizáveis | `/api/patches/*` |
+| **DM-only** | Segurança: quando `DM_ONLY=true`, `/api` exige `DM_TOKEN` | middleware global |
+
+### Segurança DM-only
+Para ativar, no `.env`:
+```env
+DM_ONLY=true
+DM_TOKEN=seu-token-secreto
+VESSIE_STORAGE_KEY=sua-chave-de-criptografia
+```
+Com `DM_ONLY=true`, **todo** acesso a `/api/*` exige o token no header
+`x-dm-token` (ou campo `token` no body), exceto `/api/health` e `/api/dub/*`.
+
+### Multi-Agent (vários modelos do LM Studio)
+No `.env`, liste os modelos extras:
+```env
+MULTI_AGENTS=true
+LM_STUDIO_MODELS=modelo-a,modelo-b,modelo-c
+```
+Use `POST /api/agents/add` para registrar agentes e `POST /api/agents/run` para
+executar o time e consolidar a resposta única.
+
+### Tags System
+O `TagSystem` injeta automaticamente o protocolo de tags no system prompt de
+qualquer modelo (com ou sem suporte nativo a *think*). Modos no `.env`:
+```env
+TAGS_ENABLED=true
+TAG_MODE=auto     # auto | manual | off
+```
 
 ## Deploy no GitHub Pages
 

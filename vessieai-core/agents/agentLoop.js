@@ -93,6 +93,11 @@ Se o mês resultado falhar, o ciclo se repete refazendo a abordagem (máx de ret
 - Se detectar pedido ambíguo, usar <Interpretagem>
 - Manter segurança e ética nas respostas
 - Respeitar o limite de tokens configurado
+
+## 9) Idioma
+- Responder SEMPRE no mesmo idioma em que o usuário escreveu
+- Português (pt-BR) quando o usuário falar português
+- Nunca trocar para outro idioma sem o usuário pedir
 `.trim();
   }
 

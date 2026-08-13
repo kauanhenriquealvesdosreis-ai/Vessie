@@ -71,7 +71,7 @@ async function handleStreamingChat(ws, payload) {
     }
 
     // Construir system prompt com personalidade, memória, tags e contexto MCP
-    const systemPrompt = await core.personality.buildSystemPrompt(conversationId);
+    const systemPrompt = await core.personality.buildSystemPrompt(conversationId, lastMsg.content);
     const memory = await core.memory.getRelevant(lastMsg.content);
     const tagInstructions = core.tags ? core.tags.buildTagInstructions() : '';
     let mcpContext = '';
