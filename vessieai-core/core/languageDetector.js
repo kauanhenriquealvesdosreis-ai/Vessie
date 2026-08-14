@@ -62,7 +62,7 @@ function localeName(code) {
 export function buildLanguageInstruction(langCode) {
   const name = localeName(langCode);
   const text = {
-    pt: `Responda SEMPRE em **Português (Brasil, pt-BR)**, no mesmo idioma em que o usuário escreveu. Nunca mude para outro idioma sem o usuário pedir.`,
+    pt: `Você DEVE responder em **Português (Brasil, pt-BR)**. O usuário escreve em português, então responda SEMPRE em pt-BR. NUNCA responda em inglês ou outro idioma, a menos que o usuário peça explicitamente para trocar de idioma.` ,
     en: `Always respond in **English**, matching the user's language. Do not switch languages unless asked.`,
     es: `Responde SIEMPRE en **Español**, en el mismo idioma en que el usuario escribió.`,
     fr: `Réponds TOUJOURS en **français**, dans la même langue que l'utilisateur.`,

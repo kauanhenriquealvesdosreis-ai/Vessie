@@ -57,6 +57,85 @@ function withLanguageInstruction(messages) {
   return [msg, ...chat];
 }
 
+// ─── Projeto selecionado: instrução para a IA + execução de manifesto de arquivos ─
+function flattenTree(tree, out = [], depth = 0, prefix = '') {
+  if (depth > 3 || out.length >= 40) return out;
+  for (const n of tree || []) {
+    if (out.length >= 40) break;
+    out.push(prefix + n.name + (n.type === 'dir' ? '/' : ''));
+    if (n.children) flattenTree(n.children, out, depth + 1, prefix + n.name + '/');
+  }
+  return out;
+}
+
+// Monta o texto que informa à IA sobre a pasta de trabalho e como criar arquivos.
+function buildProjectInstructions(sel, tree) {
+  try {
+    const root = sel?.path || '';
+    const lines = [];
+    if (!root) {
+      lines.push('Nenhuma pasta de projeto selecionada ainda. Se o usuário pedir para criar um sistema/código, peça que ele selecione uma pasta na aba "Projetos" (ou use o seletor de projeto).');
+    } else {
+      lines.push(`A pasta de trabalho atual do usuário (projeto) é: ${root}`);
+      const flat = flattenTree(tree);
+      if (flat.length) {
+        lines.push('Arquivos/pastas existentes (amostra):');
+        lines.push(flat.map(f => '  - ' + f).join('\n'));
+      } else {
+        lines.push('A pasta do projeto está vazia.');
+      }
+      lines.push(`
+AIA, VOCÊ PODE CRIAR, LER, EDITAR e DELETAR arquivos e pastas DENTRO dessa pasta do projeto.
+Quando o usuário pedir para construir/desenvolver um sistema, código, site, app, script etc., responda normalmente em texto E inclua, ao final da sua resposta, um bloco <vessie-project> com um JSON contendo a lista de operações. O sistema executa isso automaticamente na pasta do projeto. Exemplo:
+
+<vessie-project>
+{
+  "operations": [
+    { "op": "write_file", "path": "src/index.js", "content": "console.log('Vessie');" },
+    { "op": "mkdir", "path": "src" },
+    { "op": "write_file", "path": "package.json", "content": "{ \"name\": \"meu-app\", \"type\": \"module\" }" }
+  ]
+}
+</vessie-project>
+
+Regras:
+- "path" é SEMPRE relativo à pasta do projeto (ex.: "src/app.js", "package.json").
+- Operações disponíveis: write_file, mkdir (cria pasta), delete_file, delete_folder, read_file.
+- Use aspas simples no JSON. Campos desconhecidos são ignorados.`);
+    }
+    return '\n\n[PROJETO SELECIONADO]\n' + lines.join('\n');
+  } catch { return ''; }
+}
+
+function parseProjectManifest(text) {
+  const matches = [...String(text || '').matchAll(/<vessie-project>([\s\S]*?)<\/vessie-project>/gi)];
+  const ops = [];
+  for (const m of matches) {
+    try {
+      const data = JSON.parse(m[1].trim());
+      if (Array.isArray(data.operations)) ops.push(...data.operations);
+      else if (data.operations) ops.push(data.operations);
+    } catch { /* bloco inválido — ignora */ }
+  }
+  return ops;
+}
+
+async function handleProjectManifest(text) {
+  const ops = parseProjectManifest(text);
+  if (ops.length === 0) return null;
+  const results = await core.projects.executeManifest(ops);
+  const okCount = results.filter(r => r.ok).length;
+  const errCount = results.length - okCount;
+  const errors = results.filter(r => !r.ok).map(r => `${r.op} ${r.path}: ${r.error}`);
+  return {
+    ops: results.length,
+    ok: okCount,
+    errors: errCount,
+    results,
+    summary: `${okCount} de ${results.length} operações aplicadas na pasta do projeto.` + (errCount ? ` (${errCount} erro(s): ${errors.join('; ')})` : ''),
+  };
+}
+
 // ─── WebSocket ─────────────────────────────────────────────────────────────────
 wss.on('connection', (ws) => {
   ws.on('message', async (raw) => {
@@ -97,12 +176,30 @@ async function handleStreamingChat(ws, payload) {
     let mcpContext = '';
     try { if (core.mcp) mcpContext = await core.mcp.buildContext(lastMsg.content); } catch {}
 
+    // Contexto do projeto selecionado (permite à IA criar/editar/pastas no computador)
+    let projectContext = '';
+    try {
+      const sel = core.projects.getSelected();
+      const tree = await core.projects.readTree().catch(() => []);
+      projectContext = buildProjectInstructions(sel, tree);
+    } catch {}
+
+    // Reforço de idioma: impede que a IA "caia" para o inglês sem o usuário pedir
+    const boostLang = detectLanguage(lastMsg.content).code;
+    const langBoost = boostLang === 'pt'
+      ? { role: 'user', content: 'IMPORTANTE: Responda APENAS em português (pt-BR), no idioma do usuário. Não mude de idioma.' }
+      : (boostLang === 'en'
+        ? { role: 'user', content: 'IMPORTANT: Answer in English — the language of the user.' }
+        : null);
+
     const fullMessages = [
       { role: 'system', content: systemPrompt
         + (memory ? `\n\n[MEMÓRIA]\n${memory}` : '')
         + (tagInstructions ? `\n\n${tagInstructions}` : '')
-        + (mcpContext ? `\n\n[FERRAMENTAS/RECURSOS DISPONÍVEIS]\n${mcpContext}` : '') },
-      ...enhancedMessages
+        + (mcpContext ? `\n\n[FERRAMENTAS/RECURSOS DISPONÍVEIS]\n${mcpContext}` : '')
+        + (projectContext ? `${projectContext}` : '') },
+      ...enhancedMessages,
+      ...(langBoost ? [langBoost] : [])
     ];
 
     send({ type: 'start', conversationId });
@@ -149,6 +246,15 @@ async function handleStreamingChat(ws, payload) {
     if (core.cache && process.env.RESPONSE_CACHE_ENABLED === 'true') {
       core.cache.set(lastMsg.content, fullContent, core.providers).catch(() => {});
     }
+
+    // Executa operações de arquivos/pastas que a IA solicitou na pasta do projeto
+    let projectResult = null;
+    try {
+      projectResult = await handleProjectManifest(fullContent);
+      if (projectResult && projectResult.ops > 0) {
+        send({ type: 'project_result', ...projectResult });
+      }
+    } catch {}
 
     send({ type: 'done', content: fullContent });
 
@@ -299,9 +405,18 @@ app.get('/api/projects', async (req, res) => {
   res.json({ projects });
 });
 
-app.post('/api/projects/select', (req, res) => {
-  core.projects.select(req.body.path);
-  res.json({ ok: true });
+app.get('/api/projects/status', async (req, res) => {
+  res.json({ selected: core.projects.getSelected() });
+});
+
+app.post('/api/projects/select', async (req, res) => {
+  try {
+    const sel = await core.projects.setSelected(req.body.path);
+    const files = await core.projects.readTree().catch(() => []);
+    res.json({ ok: true, selected: sel, files });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
 });
 
 app.get('/api/projects/files', async (req, res) => {
@@ -309,19 +424,54 @@ app.get('/api/projects/files', async (req, res) => {
   res.json({ files });
 });
 
+app.get('/api/projects/tree', async (req, res) => {
+  const files = await core.projects.readTree().catch(() => []);
+  res.json({ files });
+});
+
 app.get('/api/projects/file', async (req, res) => {
-  const content = await core.projects.readFile(req.query.path);
-  res.json({ content });
+  try {
+    const content = await core.projects.readFile(req.query.path);
+    res.json({ content });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/projects/file', async (req, res) => {
-  await core.projects.writeFile(req.body.path, req.body.content);
-  res.json({ ok: true });
+  try {
+    await core.projects.writeFile(req.body.path, req.body.content);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.delete('/api/projects/file', async (req, res) => {
-  await core.projects.deleteFile(req.body.path);
-  res.json({ ok: true });
+  try {
+    await core.projects.deleteFile(req.body.path);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/projects/folder', async (req, res) => {
+  try {
+    const created = await core.projects.createFolder(req.body.path);
+    res.json({ ok: true, created });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/projects/folder', async (req, res) => {
+  try {
+    const deleted = await core.projects.deleteFolder(req.body.path);
+    res.json({ ok: true, deleted });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Detecção de linguagem de programação

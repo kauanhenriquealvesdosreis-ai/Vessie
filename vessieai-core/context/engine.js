@@ -1,0 +1,9 @@
+const fs=require('fs'); const path=require('path');
+class ContextEngine{
+ constructor(config,logger){this.config=config;this.logger=logger;this.dir=path.join(config.core,'context');fs.mkdirSync(this.dir,{recursive:true});this.agentFile=path.join(this.dir,'Agent.md');this.shareFile=path.join(this.dir,'Share-Thinking.md');this.lifeFile=path.join(this.dir,'Life.md');this.rulesFile=path.join(this.dir,'Rules.md');this.ensure();}
+ ensure(){if(!fs.existsSync(this.agentFile))fs.writeFileSync(this.agentFile,'# Agent.md\n\nVessieAI usa Observe → Think → Act → Result.\n','utf8');if(!fs.existsSync(this.shareFile))fs.writeFileSync(this.shareFile,'# Share-Thinking.md\n\nPreserve decisões, convenções, arquivos e estado útil entre modelos.\n','utf8');if(!fs.existsSync(this.lifeFile))fs.writeFileSync(this.lifeFile,'# Life.md\n\nVessieAI é uma personagem virtual consistente; isso não implica consciência real.\n','utf8');if(!fs.existsSync(this.rulesFile))fs.writeFileSync(this.rulesFile,'# Rules.md\n\n1. Seja clara e direta.\n2. Não invente fatos.\n3. Pergunte somente quando uma informação essencial estiver ausente.\n','utf8');}
+ read(file){try{return fs.readFileSync(file,'utf8');}catch{return '';}}
+ bundle(memory){return {agent:this.read(this.agentFile),share:this.read(this.shareFile),life:this.read(this.lifeFile),rules:this.read(this.rulesFile),memory:memory?.context?.()||'{}'};}
+ async improvePrompt(provider,user,base){const prompt=`Aprimore o pedido abaixo para execução técnica. Preserve a intenção, elimine ambiguidades e não invente requisitos.\nPEDIDO:\n${user}\n\nResponda apenas com um briefing executável.`;try{return await provider.chat([{role:'system',content:base},{role:'user',content:prompt}],{maxTokens:1800,temperature:0.2});}catch{return user;}}
+}
+module.exports={ContextEngine};

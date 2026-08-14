@@ -5,7 +5,7 @@ import {
   PanelLeft, Brain, BookOpen, Layers, FolderOpen, Zap, Search,
   ChevronRight, Smile, RefreshCw, Play, Eye, Lightbulb, Target,
   Sparkles, Globe, Code, FileText, ArrowRight, Database,
-  Volume2, Languages, Radio,
+  Save, HardDrive, FolderPlus, FilePlus, ChevronsUpDown,
 } from "lucide-react";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -23,6 +23,7 @@ type Tab = "chat" | "agents" | "memory" | "skills" | "projects" | "settings";
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 11);
 const titleFrom = (s: string) => s.slice(0, 48).replace(/\s+/g, " ").trim() || "Nova conversa";
+const stripManifest = (s: string) => String(s || "").replace(/<vessie-project>[\s\S]*?<\/vessie-project>/gi, "").replace(/\n{3,}/g, "\n\n").trim();
 
 // ─── Markdown ─────────────────────────────────────────────────────────────────
 function CodeBlock({ code, lang }: { code: string; lang: string }) {
@@ -113,28 +114,13 @@ export default function App() {
   const [lmUrl, setLmUrl] = useState(FALLBACK_LM);
   const [projects, setProjects] = useState<any[]>([]);
   const [projectFiles, setProjectFiles] = useState<any[]>([]);
-
-  // ── Dublagem / Tradução (idiomas) ──
-  const [dubLang, setDubLang] = useState<string>("pt-BR");
-  const [dubLangs, setDubLangs] = useState<any[]>([
-    { code: "pt-BR", name: "Portuguese (Brazil)", native: "Português (Brasil)" },
-    { code: "en", name: "English", native: "English" },
-    { code: "es", name: "Spanish", native: "Español" },
-    { code: "fr", name: "French", native: "Français" },
-    { code: "de", name: "German", native: "Deutsch" },
-    { code: "ja", name: "Japanese", native: "日本語" },
-    { code: "ko", name: "Korean", native: "한국어" },
-    { code: "zh", name: "Chinese (Simplified)", native: "中文" },
-  ]);
-  const [dubResult, setDubResult] = useState<string | null>(null);
-  const [autoDub, setAutoDub] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
+  const [projectStatus, setProjectStatus] = useState<any>({ path: "", name: "" });
+  const [projectPathInput, setProjectPathInput] = useState("");
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const modelDropRef = useRef<HTMLDivElement>(null);
-  const lastSpokenRef = useRef<string>("");
 
   const activeConv = conversations.find(c => c.id === activeId) ?? null;
 
@@ -167,7 +153,7 @@ export default function App() {
         setSelectedProvider(cfg.provider || "lmstudio");
         setSelectedModel(cfg.model || "local-model");
         fetchModels();
-        fetchDubLangs();
+        fetchProjectStatus();
         fetchEmotion();
       }
     } catch {}
@@ -192,14 +178,26 @@ export default function App() {
     } catch {}
   }
 
-  async function fetchDubLangs() {
+  async function fetchProjectStatus() {
     try {
-      const r = await fetch(`${BACKEND}/api/dub/languages`);
-      if (r.ok) {
-        const d = await r.json();
-        if (d.languages?.length) setDubLangs(d.languages);
-      }
+      const r = await fetch(`${BACKEND}/api/projects/status`);
+      if (r.ok) { const d = await r.json(); setProjectStatus(d.selected || { path: "", name: "" }); }
     } catch {}
+  }
+
+  async function selectProjectInChat(path: string) {
+    const p = (path || projectPathInput).trim();
+    if (!p || !backendOnline) return;
+    const r = await fetch(`${BACKEND}/api/projects/select`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path: p }) });
+    if (r.ok) {
+      const d = await r.json();
+      setProjectStatus(d.selected || { path: p, name: (p.split(/[\\/]/).pop() || p) });
+      setProjectFiles(d.files || []);
+      setProjectPathInput("");
+    } else {
+      const d = await r.json().catch(() => ({}));
+      alert(d.error || "Não foi possível selecionar a pasta.");
+    }
   }
 
   async function fetchEmotion() {
@@ -288,6 +286,11 @@ export default function App() {
               if (data.type === "think") { setThinkingContent(data.content); }
               else if (data.type === "chunk") { accumulated += data.content; patch(accumulated); }
               else if (data.type === "emotion") { setEmotion(data.emotion); }
+              else if (data.type === "project_result") {
+                setProjectFiles(prev => [...prev]);
+                setConversations(prev => prev.map(c => c.id === convId ? { ...c, messages: c.messages.map(m => m.id === asstId ? { ...m, content: stripManifest(m.content) + (m.content ? "\n" : "") + `\n\n✅ **${data.summary}**` } : m) } : c));
+                fetchProjectStatus();
+              }
               else if (data.type === "done") { ws.removeEventListener("message", handler); resolve(); }
               else if (data.type === "error") { reject(new Error(data.message)); }
             } catch {}
@@ -386,62 +389,7 @@ export default function App() {
   }
 
   // ─── Dublagem / Tradução de idiomas ─────────────────────────────────────
-  function speakText(text: string, lang: string) {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    u.rate = 1;
-    u.pitch = 1;
-    const base = (lang || "en").split("-")[0].toLowerCase();
-    const voices = synth.getVoices();
-    const v = voices.find(vo => (vo.lang || "").replace("_", "-").toLowerCase().startsWith(base));
-    if (v) u.voice = v;
-    setSpeaking(true);
-    u.onend = () => setSpeaking(false);
-    u.onerror = () => setSpeaking(false);
-    synth.speak(u);
-  }
-
-  function lastAssistantText(): string {
-    if (!activeConv) return "";
-    const last = [...activeConv.messages].reverse().find(m => m.role === "assistant");
-    return last?.content ?? "";
-  }
-
-  async function translateReply() {
-    const text = lastAssistantText() || input;
-    if (!text) return;
-    setDubResult("Traduzindo…");
-    try {
-      const r = await fetch(`${BACKEND}/api/dub/translate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, to: dubLang }),
-      });
-      const d = await r.json();
-      setDubResult(d.translatedText ?? d.error ?? "Sem resultado");
-    } catch (e: any) {
-      setDubResult(`⚠️ Erro: ${e.message}`);
-    }
-  }
-
-  function dubReply() {
-    const text = lastAssistantText();
-    if (text) speakText(text, dubLang);
-  }
-
-  useEffect(() => {
-    if (!autoDub) return;
-    const msgs = activeConv?.messages || [];
-    const last = msgs[msgs.length - 1];
-    if (last && last.role === "assistant" && last.content && lastSpokenRef.current !== last.content) {
-      lastSpokenRef.current = last.content;
-      speakText(last.content, dubLang);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeConv?.messages, autoDub, dubLang]);
+  // [dublagem de idiomas removida — substituída pelo seletor de projeto]
 
   // ─── Renders ─────────────────────────────────────────────────────────────
 
@@ -578,34 +526,36 @@ export default function App() {
           {tab === "agents" && <AgentPanel task={agentTask} setTask={setAgentTask} steps={agentSteps} running={agentRunning} onRun={runAgent} />}
           {tab === "memory" && <MemoryPanel memory={memory} setMemory={setMemory} backendOnline={backendOnline} />}
           {tab === "skills" && <SkillsPanel skills={skills} onRefresh={fetchSkills} backendOnline={backendOnline} />}
-          {tab === "projects" && <ProjectsPanel projects={projects} files={projectFiles} setFiles={setProjectFiles} backendOnline={backendOnline} />}
+          {tab === "projects" && <ProjectsPanel projects={projects} files={projectFiles} setFiles={setProjectFiles} status={projectStatus} setStatus={setProjectStatus} backendOnline={backendOnline} onSelect={selectProjectInChat} refreshProjects={() => { fetchProjects(); fetchProjectStatus(); }} />}
           {tab === "settings" && <SettingsPanel config={config} lmUrl={lmUrl} setLmUrl={setLmUrl} emotion={emotion} backendOnline={backendOnline} onSave={async (updates) => { setConfig((p: any) => ({ ...p, ...updates })); if (backendOnline) await fetch(`${BACKEND}/api/config`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) }); }} />}
         </div>
 
-        {/* Dublagem / Tradução de idiomas (só no chat) */}
+        {/* Seletor de projeto (substitui a barra de dublagem) */}
         {tab === "chat" && (
-          <div className="px-4 pt-2 shrink-0 bg-background">
+          <div className="px-4 pt-2 pb-1 shrink-0 bg-background">
             <div className="max-w-3xl mx-auto flex items-center gap-2 flex-wrap">
-              <button onClick={dubReply} disabled={!lastAssistantText()} title="Falar a última resposta (dublagem por voz)" className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${speaking ? "bg-[#10a37f]/20 border-[#10a37f]/40 text-[#10a37f]" : "border-white/10 text-muted-foreground hover:text-foreground disabled:opacity-40"}`}>
-                <Volume2 size={12} />{speaking ? "Dublando…" : "Dublar"}
-              </button>
-              <button onClick={translateReply} title="Traduzir a última resposta para o idioma selecionado" disabled={!lastAssistantText() && !input.trim()} className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-white/10 text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors">
-                <Languages size={12} />Traduzir
-              </button>
-              <select value={dubLang} onChange={e => setDubLang(e.target.value)} title="Idioma de destino (tradução/dublagem)" className="bg-[#1a1a1a] border border-white/10 rounded-full text-xs px-2.5 py-1 text-muted-foreground outline-none focus:border-[#10a37f]/40 max-w-[180px] cursor-pointer">
-                {dubLangs.map(l => <option key={l.code} value={l.code}>{l.native || l.name}</option>)}
-              </select>
-              <button onClick={() => setAutoDub(v => !v)} title="Falar cada resposta automaticamente" className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${autoDub ? "bg-[#10a37f]/20 border-[#10a37f]/40 text-[#10a37f]" : "border-white/10 text-muted-foreground hover:text-foreground"}`}>
-                <Radio size={12} />Auto-dublar {autoDub ? "ON" : "OFF"}
-              </button>
-              {dubResult && (
-                <button onClick={() => setDubResult(null)} title="Fechar tradução" className="flex-1 min-w-[220px] relative text-left text-xs px-3 py-1.5 pr-6 rounded-lg bg-white/[0.04] border border-white/10 text-foreground/90 hover:border-[#10a37f]/40 transition-colors">
-                  <span className="absolute top-1.5 right-2 text-muted-foreground">✕</span>
-                  <span className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Tradução ({dubLang})</span>
-                  <span className="whitespace-pre-wrap">{dubResult}</span>
+              <div className="flex items-center gap-2 flex-1 min-w-[240px] bg-[#1a1a1a] border border-white/10 rounded-full pl-3 pr-1.5 py-1">
+                <HardDrive size={13} className="text-muted-foreground shrink-0" />
+                <input value={projectPathInput} onChange={e => setProjectPathInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter") selectProjectInChat(); }} placeholder={projectStatus.path || "Caminho da pasta do projeto (ex.: C:\\MeuApp)…"} className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none min-w-0" />
+                <button onClick={() => selectProjectInChat()} disabled={!backendOnline} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-[#10a37f] hover:bg-[#0d8f6d] text-white disabled:opacity-40 transition-colors shrink-0">
+                  <FolderPlus size={11} />Selecionar pasta
                 </button>
+              </div>
+              {projectStatus.path && (
+                <div className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-[#10a37f]/10 border border-[#10a37f]/25 text-[#10a37f] max-w-[240px]">
+                  <FolderOpen size={12} className="shrink-0" />
+                  <span className="truncate" title={projectStatus.path}>{projectStatus.name || projectStatus.path}</span>
+                </div>
               )}
+              <button onClick={() => setTab("projects")} title="Abrir o gerenciador completo da pasta do projeto" className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-white/10 text-muted-foreground hover:text-foreground transition-colors">
+                <Code size={12} />Gerenciar arquivos
+              </button>
             </div>
+            {projectStatus.path && (
+              <p className="max-w-3xl mx-auto mt-1 text-[10px] text-muted-foreground truncate" title={projectStatus.path}>
+                Projeto ativo: {projectStatus.path} — a IA já pode ler, criar e editar arquivos/pastas dentro dela.
+              </p>
+            )}
           </div>
         )}
 

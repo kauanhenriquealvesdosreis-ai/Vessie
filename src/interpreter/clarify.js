@@ -1,0 +1,2 @@
+export function needsClarification(text){const s=text.trim();return s.length<4||/^(isso|aquilo|faz|arruma|melhora|deixa bom|etc|sei la)$/i.test(s)}
+export function makeQuestionnaire(text){const phrase=text.trim().slice(0,40);return {phrase,question:`O que você quis dizer com “${phrase}”?`,options:['Criar um sistema novo','Modificar um arquivo existente','Corrigir um erro','Otimizar código','Outra opção: vou explicar']}}

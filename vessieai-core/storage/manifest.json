@@ -1,0 +1,9 @@
+{
+  "name": "VessieAI",
+  "version": "2.0.0",
+  "runtime": "Node.js + Express",
+  "frontend": "React (static CDN build for GitHub Pages)",
+  "agentLoop": ["observar", "pensar", "agir", "resultado"],
+  "rulesLimit": 200,
+  "executionSandbox": "disabled-by-default"
+}

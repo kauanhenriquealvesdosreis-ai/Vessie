@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🤖 Assistente Auto‑Evolutivo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="app" class="chatgpt-app">
+        <!-- ===== SIDEBAR ===== -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <button id="newChatBtn" class="btn-new-chat" title="Novo chat">
+                    <i class="bi bi-plus-lg"></i> Novo chat
+                </button>
+            </div>
+
+            <!-- Busca global -->
+            <div class="sidebar-search">
+                <i class="bi bi-search"></i>
+                <input type="text" id="globalSearch" placeholder="Buscar conversas ou módulos..." />
+                <kbd>Ctrl+K</kbd>
+            </div>
+
+            <!-- Seção: Conversas -->
+            <div class="sidebar-section">
+                <div class="section-header" data-toggle="collapse" data-target="#conversationsCollapse">
+                    <span><i class="bi bi-chat-dots"></i> Conversas</span>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div id="conversationsCollapse" class="collapse show">
+                    <nav class="sidebar-nav" id="chatList">
+                        <div class="empty-state">Nenhuma conversa ainda</div>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Seção: Módulos Python -->
+            <div class="sidebar-section">
+                <div class="section-header" data-toggle="collapse" data-target="#pythonModulesCollapse">
+                    <span><i class="bi bi-puzzle"></i> Módulos Python</span>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div id="pythonModulesCollapse" class="collapse show">
+                    <div id="pythonModuleList" class="module-list">
+                        <div class="text-muted small">Carregando...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção: Módulos de Instrução -->
+            <div class="sidebar-section">
+                <div class="section-header" data-toggle="collapse" data-target="#instructionModulesCollapse">
+                    <span><i class="bi bi-book"></i> Módulos de Instrução</span>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div id="instructionModulesCollapse" class="collapse show">
+                    <div id="instructionModuleList" class="module-list">
+                        <div class="text-muted small">Carregando...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rodapé da sidebar -->
+            <div class="sidebar-footer">
+                <div class="footer-stats">
+                    <span id="statsModules">0</span> módulos
+                </div>
+                <div class="footer-actions">
+                    <button id="themeToggle" class="btn-icon" title="Alternar tema">
+                        <i class="bi bi-moon-fill"></i>
+                    </button>
+                    <button id="settingsBtn" class="btn-icon" title="Configurações">
+                        <i class="bi bi-gear"></i>
+                    </button>
+                    <button id="reloadAllBtn" class="btn-icon" title="Recarregar tudo">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ===== MAIN CHAT AREA ===== -->
+        <main class="main-area">
+            <header class="chat-header">
+                <div class="header-left">
+                    <button id="toggleSidebar" class="btn-toggle-sidebar" title="Alternar sidebar">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <h2 id="chatTitle">Nova conversa</h2>
+                </div>
+                <div class="header-right">
+                    <span class="model-badge" id="modelBadge">🧠 local-model</span>
+                    <button id="chatMenuBtn" class="btn-icon" title="Mais opções">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <button id="fullscreenBtn" class="btn-icon" title="Tela cheia">
+                        <i class="bi bi-arrows-fullscreen"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages -->
+            <div id="chatMessages" class="chat-messages">
+                <!-- Mensagem de boas-vindas será inserida via JS -->
+            </div>
+
+            <!-- Composer -->
+            <div class="chat-composer">
+                <div class="composer-wrapper">
+                    <textarea id="messageInput" rows="1" placeholder="Digite sua mensagem... (Shift+Enter = nova linha)" autofocus></textarea>
+                    <button id="sendBtn" class="btn-send" title="Enviar (Ctrl+Enter)">
+                        <i class="bi bi-arrow-up-circle-fill"></i>
+                    </button>
+                </div>
+                <div id="typingIndicator" class="typing-indicator" style="display:none;">
+                    <span></span><span></span><span></span>
+                </div>
+                <div class="composer-footer">
+                    <span class="text-muted small" id="charCount">0</span>
+                    <span class="text-muted small" id="composerStatus">Pronto</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- ===== TOAST CONTAINER ===== -->
+        <div id="toastContainer" class="toast-container"></div>
+
+        <!-- ===== MODAL CONFIGURAÇÕES ===== -->
+        <div id="settingsModal" class="modal-overlay" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="bi bi-gear"></i> Configurações</h3>
+                    <button class="modal-close" id="closeSettings">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>URL do servidor</label>
+                        <input type="text" id="configUrl" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Modelo</label>
+                        <input type="text" id="configModel" class="form-control" />
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Tokens</label>
+                            <input type="number" id="configTokens" class="form-control" min="100" max="1000000" />
+                        </div>
+                        <div class="form-group">
+                            <label>Temperatura</label>
+                            <input type="number" id="configTemp" class="form-control" step="0.1" min="0" max="2" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Intervalo de atualização (segundos)</label>
+                        <input type="number" id="configUpdateInterval" class="form-control" min="1" max="10" value="2" />
+                    </div>
+                    <button id="saveConfigBtn" class="btn-primary">Salvar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== MODAL DE EDIÇÃO DE MÓDULO ===== -->
+        <div id="moduleEditorModal" class="modal-overlay" style="display:none;">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h3><i class="bi bi-pencil"></i> Editar Módulo</h3>
+                    <button class="modal-close" id="closeModuleEditor">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Nome</label>
+                        <input type="text" id="moduleEditName" class="form-control" disabled />
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição</label>
+                        <input type="text" id="moduleEditDescription" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Tags (separadas por vírgula)</label>
+                        <input type="text" id="moduleEditTags" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Conteúdo (Markdown)</label>
+                        <textarea id="moduleEditContent" class="form-control" rows="12" style="font-family: monospace;"></textarea>
+                        <div class="text-muted small" id="moduleLineCount">0 / 200 linhas</div>
+                    </div>
+                    <button id="saveModuleBtn" class="btn-primary">Salvar alterações</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== DROPDOWN MENU ===== -->
+        <div id="chatMenuDropdown" class="dropdown-menu" style="display:none;">
+            <button id="renameChatBtn"><i class="bi bi-pencil"></i> Renomear</button>
+            <button id="deleteChatBtn"><i class="bi bi-trash"></i> Excluir</button>
+            <button id="exportChatBtn"><i class="bi bi-download"></i> Exportar</button>
+            <button id="clearChatBtn"><i class="bi bi-eraser"></i> Limpar mensagens</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
