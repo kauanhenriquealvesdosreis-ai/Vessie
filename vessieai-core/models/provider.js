@@ -1,6 +1,7 @@
 class OpenAICompatibleProvider {
   constructor(config, logger){ this.config=config; this.logger=logger; }
   headers(){ const h={'Content-Type':'application/json'}; if(this.config.lmApiKey) h.Authorization=`Bearer ${this.config.lmApiKey}`; return h; }
+  statusJSON(){ return { provider:'lmstudio', url:this.config.lmStudioUrl, model:this.config.lmModel, status:'preferred' }; }
   async listModels(){
     const r=await fetch(`${this.config.lmStudioUrl}/models`,{headers:this.headers()});
     if(!r.ok) throw new Error(`Modelos: HTTP ${r.status}`); return r.json();
