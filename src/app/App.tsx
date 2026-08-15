@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 // @ts-ignore Scratch Studio is a Vite-compatible JavaScript workspace component.
 import ScratchStudio from "../components/ScratchStudio.jsx";
 import TabWorkspace, { useTabState } from "../components/TabWorkspace";
+import { createCoreClient, offlineResponse } from "../services/coreClient";
 import "../styles.css";
 import {
   Plus, Send, Settings, Trash2, MessageSquare, ChevronDown, X, Loader2,
@@ -120,6 +121,8 @@ export default function App() {
   const [projectFiles, setProjectFiles] = useState<any[]>([]);
   const [projectStatus, setProjectStatus] = useState<any>({ path: "", name: "" });
   const [projectPathInput, setProjectPathInput] = useState("");
+  const coreClient = useRef(createCoreClient(BACKEND));
+  const [coreStatus, setCoreStatus] = useState<any>({ online: false, mode: "offline-browser" });
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -147,6 +150,7 @@ export default function App() {
   }, [input]);
 
   async function checkConnections() {
+    setCoreStatus(await coreClient.current.health());
     // Backend
     try {
       const r = await fetch(`${BACKEND}/api/config`, { signal: AbortSignal.timeout(3000) });
@@ -275,8 +279,16 @@ export default function App() {
 
     const allMessages = [...conv.messages, userMsg].map(m => ({ role: m.role, content: m.content }));
 
-    if (backendOnline) {
-      // Backend WebSocket
+  if (!backendOnline && !lmOnline) {
+    const result = await offlineResponse(text, { model: selectedModel, emotion: emotion.name });
+    setConversations(prev => prev.map(c => c.id === convId ? { ...c, messages: c.messages.map(m => m.id === asstId ? { ...m, content: result.answer } : m) } : c));
+    setCoreStatus({ online: false, mode: result.mode, intent: result.intent });
+    setStreaming(false);
+    return;
+  }
+
+  if (backendOnline) {
+  // Backend WebSocket
       try {
         const ws = connectWS();
         const patch = (content: string) => setConversations(prev => prev.map(c => c.id === convId ? { ...c, messages: c.messages.map(m => m.id === asstId ? { ...m, content } : m) } : c));
@@ -570,17 +582,17 @@ export default function App() {
           <div className="px-4 pb-4 pt-2 shrink-0 bg-background">
             <div className="max-w-3xl mx-auto">
               <div className="relative flex items-end gap-3 bg-[#1a1a1a] border border-white/10 rounded-2xl px-4 py-3 focus-within:border-[#10a37f]/40 transition-colors shadow-xl">
-                <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder={`Mensagem para Vessie AI${onlineStatus === "offline" ? " (offline)" : ""}…`} disabled={streaming || onlineStatus === "offline"} rows={1} className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none leading-6 max-h-44 overflow-y-auto disabled:opacity-40" style={{ scrollbarWidth: "none" }} />
+                <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder={`Mensagem para Vessie AI${onlineStatus === "offline" ? " (offline)" : ""}…`} disabled={streaming} rows={1} className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none leading-6 max-h-44 overflow-y-auto disabled:opacity-40" style={{ scrollbarWidth: "none" }} />
                 <div className="flex items-center gap-1 pb-0.5 shrink-0">
                   {streaming ? (
                     <button onClick={() => wsRef.current?.close()} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-muted-foreground transition-colors" title="Parar"><Square size={14} /></button>
                   ) : (
-                    <button onClick={() => sendMessage()} disabled={!input.trim() || onlineStatus === "offline"} className="p-2 rounded-lg bg-[#10a37f] hover:bg-[#0d8f6d] disabled:bg-white/10 disabled:text-muted-foreground text-white transition-colors" title="Enviar"><Send size={14} /></button>
+                    <button onClick={() => sendMessage()} disabled={!input.trim()} className="p-2 rounded-lg bg-[#10a37f] hover:bg-[#0d8f6d] disabled:bg-white/10 disabled:text-muted-foreground text-white transition-colors" title="Enviar"><Send size={14} /></button>
                   )}
                 </div>
               </div>
               <p className="text-center text-[10px] text-muted-foreground mt-2">
-                {backendOnline ? `Backend • ${selectedProvider} • ${selectedModel}` : lmOnline ? `LM Studio direto • ${selectedModel}` : "Offline — inicie o backend ou LM Studio"}
+                {backendOnline ? `Core local • ${selectedProvider} • ${selectedModel}` : lmOnline ? `LM Studio direto • ${selectedModel}` : `Offline seguro • ${coreStatus.mode || "browser"}`}
               </p>
             </div>
           </div>
