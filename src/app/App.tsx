@@ -1,4 +1,7 @@
 import { useState, useRef, useEffect, useCallback, Fragment } from "react";
+// @ts-ignore Scratch Studio is a Vite-compatible JavaScript workspace component.
+import ScratchStudio from "../components/ScratchStudio.jsx";
+import "../styles.css";
 import {
   Plus, Send, Settings, Trash2, MessageSquare, ChevronDown, X, Loader2,
   Copy, Check, RotateCcw, Square, Cpu, AlertCircle, PanelLeftClose,
@@ -18,7 +21,7 @@ interface Message { id: string; role: Role; content: string; thinking?: string; 
 interface Conversation { id: string; title: string; messages: Message[]; model: string; provider: string; createdAt: Date; }
 interface Model { id: string; provider: string; name: string; }
 interface Emotion { name: string; emoji: string; color: string; description: string; constraintLevel?: number; }
-type Tab = "chat" | "agents" | "memory" | "skills" | "projects" | "settings";
+type Tab = "chat" | "agents" | "memory" | "skills" | "scratch" | "settings";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 11);
@@ -398,7 +401,7 @@ export default function App() {
     { id: "agents", icon: <Zap size={16} />, label: "Agentes" },
     { id: "memory", icon: <Brain size={16} />, label: "Memória" },
     { id: "skills", icon: <BookOpen size={16} />, label: "Skills" },
-    { id: "projects", icon: <FolderOpen size={16} />, label: "Projetos" },
+    { id: "scratch", icon: <Layers size={16} />, label: "Scratch Studio" },
     { id: "settings", icon: <Settings size={16} />, label: "Config" },
   ];
 
@@ -526,7 +529,7 @@ export default function App() {
           {tab === "agents" && <AgentPanel task={agentTask} setTask={setAgentTask} steps={agentSteps} running={agentRunning} onRun={runAgent} />}
           {tab === "memory" && <MemoryPanel memory={memory} setMemory={setMemory} backendOnline={backendOnline} />}
           {tab === "skills" && <SkillsPanel skills={skills} onRefresh={fetchSkills} backendOnline={backendOnline} />}
-          {tab === "projects" && <ProjectsPanel projects={projects} files={projectFiles} setFiles={setProjectFiles} status={projectStatus} setStatus={setProjectStatus} backendOnline={backendOnline} onSelect={selectProjectInChat} refreshProjects={() => { fetchProjects(); fetchProjectStatus(); }} />}
+          {tab === "scratch" && <div className="p-4 md:p-6 overflow-auto h-full"><ScratchStudio onCoreSync={async (scratch: any) => { try { await fetch(`${BACKEND}/api/scratch`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(scratch) }); } catch {} }} /></div>}
           {tab === "settings" && <SettingsPanel config={config} lmUrl={lmUrl} setLmUrl={setLmUrl} emotion={emotion} backendOnline={backendOnline} onSave={async (updates) => { setConfig((p: any) => ({ ...p, ...updates })); if (backendOnline) await fetch(`${BACKEND}/api/config`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) }); }} />}
         </div>
 
