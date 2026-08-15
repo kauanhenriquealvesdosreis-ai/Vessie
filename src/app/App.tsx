@@ -1,4 +1,9 @@
 import { useState, useRef, useEffect, useCallback, Fragment } from "react";
+// @ts-ignore Scratch Studio is a Vite-compatible JavaScript workspace component.
+import ScratchStudio from "../components/ScratchStudio.jsx";
+import TabWorkspace, { useTabState } from "../components/TabWorkspace";
+import { createCoreClient, offlineResponse } from "../services/coreClient";
+import "../styles.css";
 import {
   Plus, Send, Settings, Trash2, MessageSquare, ChevronDown, X, Loader2,
   Copy, Check, RotateCcw, Square, Cpu, AlertCircle, PanelLeftClose,
@@ -18,7 +23,7 @@ interface Message { id: string; role: Role; content: string; thinking?: string; 
 interface Conversation { id: string; title: string; messages: Message[]; model: string; provider: string; createdAt: Date; }
 interface Model { id: string; provider: string; name: string; }
 interface Emotion { name: string; emoji: string; color: string; description: string; constraintLevel?: number; }
-type Tab = "chat" | "agents" | "memory" | "skills" | "projects" | "settings";
+type Tab = "chat" | "agents" | "memory" | "skills" | "scratch" | "settings";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 11);
@@ -90,7 +95,7 @@ function ri(t: string): JSX.Element {
 
 // ─── Main App ────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab] = useState<Tab>("chat");
+  const [tab, setTab] = useTabState("chat") as [Tab, (id: string) => void];
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -116,6 +121,8 @@ export default function App() {
   const [projectFiles, setProjectFiles] = useState<any[]>([]);
   const [projectStatus, setProjectStatus] = useState<any>({ path: "", name: "" });
   const [projectPathInput, setProjectPathInput] = useState("");
+  const coreClient = useRef(createCoreClient(BACKEND));
+  const [coreStatus, setCoreStatus] = useState<any>({ online: false, mode: "offline-browser" });
 
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -143,6 +150,7 @@ export default function App() {
   }, [input]);
 
   async function checkConnections() {
+    setCoreStatus(await coreClient.current.health());
     // Backend
     try {
       const r = await fetch(`${BACKEND}/api/config`, { signal: AbortSignal.timeout(3000) });
@@ -271,8 +279,16 @@ export default function App() {
 
     const allMessages = [...conv.messages, userMsg].map(m => ({ role: m.role, content: m.content }));
 
-    if (backendOnline) {
-      // Backend WebSocket
+  if (!backendOnline && !lmOnline) {
+    const result = await offlineResponse(text, { model: selectedModel, emotion: emotion.name });
+    setConversations(prev => prev.map(c => c.id === convId ? { ...c, messages: c.messages.map(m => m.id === asstId ? { ...m, content: result.answer } : m) } : c));
+    setCoreStatus({ online: false, mode: result.mode, intent: result.intent });
+    setStreaming(false);
+    return;
+  }
+
+  if (backendOnline) {
+  // Backend WebSocket
       try {
         const ws = connectWS();
         const patch = (content: string) => setConversations(prev => prev.map(c => c.id === convId ? { ...c, messages: c.messages.map(m => m.id === asstId ? { ...m, content } : m) } : c));
@@ -398,7 +414,7 @@ export default function App() {
     { id: "agents", icon: <Zap size={16} />, label: "Agentes" },
     { id: "memory", icon: <Brain size={16} />, label: "Memória" },
     { id: "skills", icon: <BookOpen size={16} />, label: "Skills" },
-    { id: "projects", icon: <FolderOpen size={16} />, label: "Projetos" },
+    { id: "scratch", icon: <Layers size={16} />, label: "Scratch Studio" },
     { id: "settings", icon: <Settings size={16} />, label: "Config" },
   ];
 
@@ -501,7 +517,7 @@ export default function App() {
           <button onClick={() => setSidebarOpen(v => !v)} className="p-1.5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors">
             {sidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeft size={15} />}
           </button>
-          <div className="flex-1 flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-2 min-w-0">
             {TABS.find(t => t.id === tab)?.icon}
             <span className="text-sm font-medium">{TABS.find(t => t.id === tab)?.label}</span>
             {tab === "chat" && activeConv && (
@@ -520,13 +536,15 @@ export default function App() {
           </div>
         </header>
 
+        <TabWorkspace tabs={TABS.map(item => ({ id: item.id, label: item.label, icon: item.icon, pinned: item.id === "chat", closable: item.id !== "chat" }))} activeId={tab} onChange={id => setTab(id as Tab)} onNew={() => setTab("chat")} onClose={id => { if (tab === id) setTab("chat"); }} />
+
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
           {tab === "chat" && <ChatPanel activeConv={activeConv} streaming={streaming} thinkingContent={showThinking ? thinkingContent : null} messagesEndRef={messagesEndRef} />}
           {tab === "agents" && <AgentPanel task={agentTask} setTask={setAgentTask} steps={agentSteps} running={agentRunning} onRun={runAgent} />}
           {tab === "memory" && <MemoryPanel memory={memory} setMemory={setMemory} backendOnline={backendOnline} />}
           {tab === "skills" && <SkillsPanel skills={skills} onRefresh={fetchSkills} backendOnline={backendOnline} />}
-          {tab === "projects" && <ProjectsPanel projects={projects} files={projectFiles} setFiles={setProjectFiles} status={projectStatus} setStatus={setProjectStatus} backendOnline={backendOnline} onSelect={selectProjectInChat} refreshProjects={() => { fetchProjects(); fetchProjectStatus(); }} />}
+          {tab === "scratch" && <div className="p-4 md:p-6 overflow-auto h-full"><ScratchStudio onCoreSync={async (scratch: any) => { try { await fetch(`${BACKEND}/api/scratch`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(scratch) }); } catch {} }} /></div>}
           {tab === "settings" && <SettingsPanel config={config} lmUrl={lmUrl} setLmUrl={setLmUrl} emotion={emotion} backendOnline={backendOnline} onSave={async (updates) => { setConfig((p: any) => ({ ...p, ...updates })); if (backendOnline) await fetch(`${BACKEND}/api/config`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updates) }); }} />}
         </div>
 
@@ -547,7 +565,7 @@ export default function App() {
                   <span className="truncate" title={projectStatus.path}>{projectStatus.name || projectStatus.path}</span>
                 </div>
               )}
-              <button onClick={() => setTab("projects")} title="Abrir o gerenciador completo da pasta do projeto" className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-white/10 text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => setTab("scratch")} title="Abrir o gerenciador completo da pasta do projeto" className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-white/10 text-muted-foreground hover:text-foreground transition-colors">
                 <Code size={12} />Gerenciar arquivos
               </button>
             </div>
@@ -564,17 +582,17 @@ export default function App() {
           <div className="px-4 pb-4 pt-2 shrink-0 bg-background">
             <div className="max-w-3xl mx-auto">
               <div className="relative flex items-end gap-3 bg-[#1a1a1a] border border-white/10 rounded-2xl px-4 py-3 focus-within:border-[#10a37f]/40 transition-colors shadow-xl">
-                <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder={`Mensagem para Vessie AI${onlineStatus === "offline" ? " (offline)" : ""}…`} disabled={streaming || onlineStatus === "offline"} rows={1} className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none leading-6 max-h-44 overflow-y-auto disabled:opacity-40" style={{ scrollbarWidth: "none" }} />
+                <textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder={`Mensagem para Vessie AI${onlineStatus === "offline" ? " (offline)" : ""}…`} disabled={streaming} rows={1} className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none outline-none leading-6 max-h-44 overflow-y-auto disabled:opacity-40" style={{ scrollbarWidth: "none" }} />
                 <div className="flex items-center gap-1 pb-0.5 shrink-0">
                   {streaming ? (
                     <button onClick={() => wsRef.current?.close()} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-muted-foreground transition-colors" title="Parar"><Square size={14} /></button>
                   ) : (
-                    <button onClick={() => sendMessage()} disabled={!input.trim() || onlineStatus === "offline"} className="p-2 rounded-lg bg-[#10a37f] hover:bg-[#0d8f6d] disabled:bg-white/10 disabled:text-muted-foreground text-white transition-colors" title="Enviar"><Send size={14} /></button>
+                    <button onClick={() => sendMessage()} disabled={!input.trim()} className="p-2 rounded-lg bg-[#10a37f] hover:bg-[#0d8f6d] disabled:bg-white/10 disabled:text-muted-foreground text-white transition-colors" title="Enviar"><Send size={14} /></button>
                   )}
                 </div>
               </div>
               <p className="text-center text-[10px] text-muted-foreground mt-2">
-                {backendOnline ? `Backend • ${selectedProvider} • ${selectedModel}` : lmOnline ? `LM Studio direto • ${selectedModel}` : "Offline — inicie o backend ou LM Studio"}
+                {backendOnline ? `Core local • ${selectedProvider} • ${selectedModel}` : lmOnline ? `LM Studio direto • ${selectedModel}` : `Offline seguro • ${coreStatus.mode || "browser"}`}
               </p>
             </div>
           </div>

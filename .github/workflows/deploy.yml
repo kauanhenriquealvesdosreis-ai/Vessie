@@ -10,7 +10,7 @@ name: Deploy site (Vite) to GitHub Pages
 
 on:
   push:
-    branches: ["plataforma-educativa-ia"]
+    branches: ["main", "plataforma-educativa-ia"]
   workflow_dispatch:
 
 permissions:

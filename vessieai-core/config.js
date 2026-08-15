@@ -30,6 +30,8 @@ function createConfig(root) {
     nodeEnv: process.env.NODE_ENV || 'development',
     lmStudioUrl: (process.env.LM_STUDIO_URL || 'http://127.0.0.1:1234/v1').replace(/\/$/, ''),
     lmModel: process.env.LM_MODEL || 'local-model',
+    providerPreference: process.env.AI_PROVIDER || 'hybrid',
+    ggufModelPath: process.env.GGUF_MODEL_PATH || '',
     lmModels: csv(process.env.LM_MODELS, [process.env.LM_MODEL || 'local-model']),
     lmApiKey: process.env.LM_API_KEY || '',
     maxTokens: num(process.env.MAX_TOKENS, 8192),
