@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 // @ts-ignore Scratch Studio is a Vite-compatible JavaScript workspace component.
 import ScratchStudio from "../components/ScratchStudio.jsx";
+import TabWorkspace, { useTabState } from "../components/TabWorkspace";
 import "../styles.css";
 import {
   Plus, Send, Settings, Trash2, MessageSquare, ChevronDown, X, Loader2,
@@ -93,7 +94,7 @@ function ri(t: string): JSX.Element {
 
 // ─── Main App ────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab] = useState<Tab>("chat");
+  const [tab, setTab] = useTabState("chat") as [Tab, (id: string) => void];
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -504,7 +505,7 @@ export default function App() {
           <button onClick={() => setSidebarOpen(v => !v)} className="p-1.5 rounded hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors">
             {sidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeft size={15} />}
           </button>
-          <div className="flex-1 flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-2 min-w-0">
             {TABS.find(t => t.id === tab)?.icon}
             <span className="text-sm font-medium">{TABS.find(t => t.id === tab)?.label}</span>
             {tab === "chat" && activeConv && (
@@ -522,6 +523,8 @@ export default function App() {
             </button>
           </div>
         </header>
+
+        <TabWorkspace tabs={TABS.map(item => ({ id: item.id, label: item.label, icon: item.icon, pinned: item.id === "chat", closable: item.id !== "chat" }))} activeId={tab} onChange={id => setTab(id as Tab)} onNew={() => setTab("chat")} onClose={id => { if (tab === id) setTab("chat"); }} />
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -550,7 +553,7 @@ export default function App() {
                   <span className="truncate" title={projectStatus.path}>{projectStatus.name || projectStatus.path}</span>
                 </div>
               )}
-              <button onClick={() => setTab("projects")} title="Abrir o gerenciador completo da pasta do projeto" className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-white/10 text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={() => setTab("scratch")} title="Abrir o gerenciador completo da pasta do projeto" className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-white/10 text-muted-foreground hover:text-foreground transition-colors">
                 <Code size={12} />Gerenciar arquivos
               </button>
             </div>
